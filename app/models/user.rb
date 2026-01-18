@@ -87,7 +87,7 @@ class User < ApplicationRecord
   end
 
   def ai_available?
-    !Rails.application.config.app_mode.self_hosted? || ENV["OPENAI_ACCESS_TOKEN"].present?
+    !Rails.application.config.app_mode.self_hosted? || llm_provider_configured?
   end
 
   def ai_enabled?
@@ -164,6 +164,11 @@ class User < ApplicationRecord
   end
 
   private
+    def llm_provider_configured?
+      ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present? ||
+        (ENV["OLLAMA_HOST"].present? || Setting.ollama_host.present?)
+    end
+
     def ensure_valid_profile_image
       return unless profile_image.attached?
 

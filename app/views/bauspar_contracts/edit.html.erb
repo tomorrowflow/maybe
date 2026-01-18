@@ -1,0 +1,10 @@
+<%# locals: (account:) %>
+
+<%= turbo_frame_tag dom_id(account, :modal) do %>
+  <%= modal do |m| %>
+    <% m.title { "Edit building savings contract (Bausparvertrag)" } %>
+    <% m.body do %>
+      <%= render "form", account: account, url: bauspar_contract_path(account) %>
+    <% end %>
+  <% end %>
+<% end %>

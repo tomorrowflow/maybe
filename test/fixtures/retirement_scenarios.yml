@@ -1,0 +1,24 @@
+basic:
+  family: dylan_family
+  name: "My Retirement Plan"
+  calculation_date: <%= Date.today %>
+  retirement_monthly_expenses: 4000
+  portfolio_withdrawal_rate: 4.0
+  gesetzliche_rente_monthly: 1500
+
+conservative_plan:
+  family: dylan_family
+  name: "Conservative Plan"
+  calculation_date: <%= Date.today %>
+  retirement_monthly_expenses: 3500
+  portfolio_withdrawal_rate: 3.5
+  gesetzliche_rente_monthly: 1500
+
+optimistic_plan:
+  family: dylan_family
+  name: "Optimistic Plan"
+  calculation_date: <%= Date.today %>
+  retirement_monthly_expenses: 5000
+  portfolio_withdrawal_rate: 5.0
+  gesetzliche_rente_monthly: 1500
+  other_pension_monthly: 500

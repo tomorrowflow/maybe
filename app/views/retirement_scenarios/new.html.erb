@@ -1,0 +1,228 @@
+<%= content_for :header_nav do %>
+  <%= render "retirement_scenarios/wizard_nav", current_step: @step %>
+<% end %>
+
+<%= content_for :previous_path, retirement_scenarios_path %>
+<%= content_for :cancel_path, retirement_scenarios_path %>
+
+<div data-controller="retirement-wizard" data-retirement-wizard-current-step-value="<%= @step %>">
+  <div class="space-y-4">
+    <%= styled_form_with model: @scenario, url: retirement_scenarios_path, class: "space-y-6" do |form| %>
+      <!-- Step 1: Basics -->
+      <div data-retirement-wizard-target="step" data-step="basics" class="<%= 'hidden' unless @step == 'basics' %>">
+        <div class="text-center space-y-2 mb-8">
+          <h1 class="text-3xl text-primary font-medium">Let's plan your retirement</h1>
+          <p class="text-secondary text-sm max-w-md mx-auto">
+            Start by setting your basic retirement goals and target expenses.
+          </p>
+        </div>
+
+        <div class="mx-auto max-w-lg space-y-4">
+          <%= form.text_field :name,
+                              label: "Plan Name",
+                              placeholder: "My Retirement Plan",
+                              required: true %>
+
+          <%= form.number_field :retirement_monthly_expenses,
+                                label: "Monthly Expenses in Retirement",
+                                placeholder: "4000",
+                                min: 0,
+                                step: 1,
+                                required: true %>
+
+          <div class="border border-tertiary rounded-lg p-4 flex gap-3">
+            <%= icon "info", class: "w-5 h-5 text-secondary shrink-0 mt-0.5" %>
+            <div class="space-y-1 text-sm">
+              <h4 class="text-primary font-medium">What should I include?</h4>
+              <p class="text-secondary">
+                Include all expected monthly costs: housing, food, healthcare, travel, hobbies, and any regular expenses you expect in retirement.
+              </p>
+            </div>
+          </div>
+
+          <div class="pt-4">
+            <button type="button"
+                    class="font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg w-full justify-center px-3 py-2 text-sm text-inverse bg-inverse hover:bg-inverse-hover"
+                    data-action="click->retirement-wizard#nextStep"
+                    data-wizard-next-step="income">
+              Continue
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Income -->
+      <div data-retirement-wizard-target="step" data-step="income" class="<%= 'hidden' unless @step == 'income' %>">
+        <div class="text-center space-y-2 mb-8">
+          <h1 class="text-3xl text-primary font-medium">Your retirement income</h1>
+          <p class="text-secondary text-sm max-w-md mx-auto">
+            Enter your expected pension and income sources.
+          </p>
+        </div>
+
+        <div class="mx-auto max-w-lg space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <%= form.date_field :salary_end_date,
+                                label: "Last Day of Salary" %>
+
+            <%= form.number_field :current_annual_salary,
+                                  label: "Current Annual Salary",
+                                  placeholder: "75000",
+                                  min: 0,
+                                  step: 100 %>
+          </div>
+
+          <div class="border-t border-secondary pt-4">
+            <p class="text-sm font-medium text-primary mb-3">State Pension (Gesetzliche Rente)</p>
+
+            <div class="grid grid-cols-2 gap-4">
+              <%= form.date_field :gesetzliche_rente_start_date,
+                                  label: "Start Date" %>
+
+              <%= form.number_field :gesetzliche_rente_monthly,
+                                    label: "Monthly Amount",
+                                    placeholder: "1500",
+                                    min: 0,
+                                    step: 10 %>
+            </div>
+          </div>
+
+          <div class="border-t border-secondary pt-4">
+            <p class="text-sm font-medium text-primary mb-3">Private Pension Plans</p>
+
+            <% if @scenario.pension_sources.any? %>
+              <div class="space-y-3">
+                <% @scenario.pension_sources.each_with_index do |pension_source, index| %>
+                  <%= form.fields_for :pension_sources, pension_source, index: index do |ps_form| %>
+                    <%= ps_form.hidden_field :account_id %>
+                    <div class="bg-surface-inset rounded-lg p-4">
+                      <div class="flex items-center gap-3 mb-3">
+                        <%= icon "line-chart", class: "w-5 h-5 text-blue-600" %>
+                        <div>
+                          <div class="font-medium text-primary"><%= pension_source.account.name %></div>
+                          <div class="text-xs text-secondary"><%= pension_source.account.long_subtype_label %></div>
+                        </div>
+                      </div>
+                      <div class="grid grid-cols-2 gap-3">
+                        <%= ps_form.number_field :expected_monthly_payout,
+                                                 label: "Expected Monthly Payout",
+                                                 placeholder: "500",
+                                                 min: 0,
+                                                 step: 10 %>
+                        <%= ps_form.date_field :payout_start_date,
+                                               label: "Payout Start Date" %>
+                      </div>
+                    </div>
+                  <% end %>
+                <% end %>
+              </div>
+            <% else %>
+              <div class="bg-surface-inset rounded-lg p-4 text-center">
+                <p class="text-sm text-secondary mb-2">No pension accounts found.</p>
+                <p class="text-xs text-secondary">
+                  Add Riester, Rürup, or Betriebsrente accounts to your portfolio to include them here.
+                </p>
+              </div>
+            <% end %>
+          </div>
+
+          <div class="border-t border-secondary pt-4">
+            <p class="text-sm font-medium text-primary mb-3">Other Pension Sources</p>
+            <div class="grid grid-cols-2 gap-4">
+              <%= form.date_field :other_pension_start_date,
+                                  label: "Start Date" %>
+
+              <%= form.number_field :other_pension_monthly,
+                                    label: "Monthly Amount",
+                                    placeholder: "500",
+                                    min: 0,
+                                    step: 10 %>
+            </div>
+          </div>
+
+          <div class="pt-4">
+            <button type="button"
+                    class="font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg w-full justify-center px-3 py-2 text-sm text-inverse bg-inverse hover:bg-inverse-hover"
+                    data-action="click->retirement-wizard#nextStep"
+                    data-wizard-next-step="portfolio">
+              Continue
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Portfolio -->
+      <div data-retirement-wizard-target="step" data-step="portfolio" class="<%= 'hidden' unless @step == 'portfolio' %>">
+        <div class="text-center space-y-2 mb-8">
+          <h1 class="text-3xl text-primary font-medium">Portfolio strategy</h1>
+          <p class="text-secondary text-sm max-w-md mx-auto">
+            Set your withdrawal rate and growth assumptions.
+          </p>
+        </div>
+
+        <div class="mx-auto max-w-lg space-y-4">
+          <%= form.number_field :portfolio_withdrawal_rate,
+                                label: "Safe Withdrawal Rate (%)",
+                                placeholder: "4.0",
+                                step: 0.1,
+                                min: 0.1,
+                                max: 10,
+                                required: true %>
+
+          <div class="border border-tertiary rounded-lg p-4 flex gap-3">
+            <%= icon "info", class: "w-5 h-5 text-secondary shrink-0 mt-0.5" %>
+            <div class="space-y-1 text-sm">
+              <h4 class="text-primary font-medium">What's a safe withdrawal rate?</h4>
+              <p class="text-secondary">
+                The percentage you can withdraw annually without depleting your portfolio. Conservative: 3-3.5%, Moderate: 4%, Aggressive: 5%
+              </p>
+            </div>
+          </div>
+
+          <div class="border-t border-secondary pt-4">
+            <p class="text-sm font-medium text-primary mb-3">Growth Assumptions</p>
+
+            <div class="grid grid-cols-2 gap-4">
+              <%= form.number_field :portfolio_growth_rate,
+                                    label: "Expected Annual Return (%)",
+                                    placeholder: "7.0",
+                                    step: 0.1,
+                                    min: -20,
+                                    max: 50 %>
+
+              <%= form.number_field :inflation_rate,
+                                    label: "Expected Inflation (%)",
+                                    placeholder: "3.0",
+                                    step: 0.1,
+                                    min: 0,
+                                    max: 20 %>
+            </div>
+
+            <%= form.number_field :monthly_contribution,
+                                  label: "Monthly Contribution",
+                                  placeholder: "Leave blank to auto-calculate",
+                                  min: 0,
+                                  step: 10,
+                                  class: "mt-4" %>
+
+            <p class="text-xs text-secondary mt-1">If blank, we'll calculate from your savings history.</p>
+          </div>
+
+          <div class="border border-blue-200 bg-blue-50 theme-dark:border-blue-800 theme-dark:bg-blue-900/20 rounded-lg p-4 flex gap-3">
+            <%= icon "trending-up", class: "w-5 h-5 text-blue-600 shrink-0 mt-0.5" %>
+            <div class="space-y-1 text-sm">
+              <h4 class="text-primary font-medium">Compound Growth</h4>
+              <p class="text-secondary">
+                Your portfolio's growth accelerates over time thanks to compound returns on both your contributions and investment gains.
+              </p>
+            </div>
+          </div>
+
+          <div class="pt-4">
+            <%= form.submit "Create Plan" %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

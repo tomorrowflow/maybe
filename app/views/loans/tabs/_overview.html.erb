@@ -10,8 +10,11 @@
   <% end %>
 
   <%= summary_card title: t(".interest_rate") do %>
-    <% if account.loan.interest_rate.present? %>
-      <%= number_to_percentage(account.loan.interest_rate, precision: 3) %>
+    <% if account.loan.sollzins.present? %>
+      <div><%= number_to_percentage(account.loan.sollzins, precision: 3) %></div>
+      <% if account.loan.effektivzins.present? %>
+        <div class="text-xs text-gray-500">APR: <%= number_to_percentage(account.loan.effektivzins, precision: 3) %></div>
+      <% end %>
     <% else %>
       <%= t(".unknown") %>
     <% end %>
@@ -41,6 +44,27 @@
 
   <%= summary_card title: t(".type") do %>
     <%= account.loan.rate_type&.titleize || t(".unknown") %>
+  <% end %>
+
+  <% if account.loan.fixed_rate_end_date.present? %>
+    <%= summary_card title: "Fixed Rate Until" do %>
+      <div><%= account.loan.fixed_rate_end_date.strftime("%b %d, %Y") %></div>
+      <% if account.loan.fixed_rate_ending_soon? %>
+        <div class="text-xs text-yellow-600 font-medium">⚠️ Ends in <%= account.loan.days_until_fixed_rate_end %> days</div>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <% if account.loan.maturity_date.present? %>
+    <%= summary_card title: "Maturity Date" do %>
+      <%= account.loan.maturity_date.strftime("%b %d, %Y") %>
+    <% end %>
+  <% end %>
+
+  <% if account.loan.extra_payment_allowance_percent.present? %>
+    <%= summary_card title: "Extra Payment Allowance" do %>
+      <%= number_to_percentage(account.loan.extra_payment_allowance_percent, precision: 2) %> per year
+    <% end %>
   <% end %>
 </div>
 

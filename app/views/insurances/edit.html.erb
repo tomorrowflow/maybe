@@ -1,0 +1,10 @@
+<%# locals: (account:) %>
+
+<%= turbo_frame_tag dom_id(account, :modal) do %>
+  <%= modal do |m| %>
+    <% m.title { "Edit insurance" } %>
+    <% m.body do %>
+      <%= render "form", account: account, url: insurance_path(account) %>
+    <% end %>
+  <% end %>
+<% end %>

@@ -16,6 +16,7 @@
         <%= loan_form.number_field :interest_rate,
                                  label: t("loans.form.interest_rate"),
                                  placeholder: t("loans.form.interest_rate_placeholder"),
+                                 helper_text: "Nominal interest rate (Sollzins)",
                                  min: 0,
                                  step: 0.005 %>
         <%= loan_form.select :rate_type,
@@ -24,9 +25,40 @@
       </div>
 
       <div class="flex items-center gap-2">
+        <%= loan_form.number_field :effective_interest_rate,
+                                 label: "Effective Interest Rate (APR / Effektivzins)",
+                                 placeholder: "3.720",
+                                 helper_text: "Annual percentage rate including all costs",
+                                 min: 0,
+                                 step: 0.001 %>
+      </div>
+
+      <div class="flex items-center gap-2">
         <%= loan_form.number_field :term_months,
                                  label: t("loans.form.term_months"),
                                  placeholder: t("loans.form.term_months_placeholder") %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= loan_form.date_field :fixed_rate_end_date,
+                                label: "Fixed Rate Period Ends",
+                                helper_text: "When does the fixed rate period end? (Zinsbindung)" %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= loan_form.date_field :maturity_date,
+                                label: "Loan Maturity Date",
+                                helper_text: "When will the loan be fully paid off?" %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= loan_form.number_field :extra_payment_allowance_percent,
+                                 label: "Extra Payment Allowance",
+                                 placeholder: "5.0",
+                                 helper_text: "Annual extra repayment allowance (Sondertilgung) in %",
+                                 min: 0,
+                                 max: 100,
+                                 step: 0.01 %>
       </div>
     <% end %>
   </div>

@@ -1,0 +1,11 @@
+one:
+  bausparsumme: 50000
+  phase: saving
+
+bauspar_allocated:
+  bausparsumme: 40000
+  phase: allocated
+
+bauspar_loan:
+  bausparsumme: 60000
+  phase: loan

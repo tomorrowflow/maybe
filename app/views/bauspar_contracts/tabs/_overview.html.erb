@@ -1,0 +1,59 @@
+<%# locals: (account:) %>
+
+<div class="grid grid-cols-3 gap-2">
+  <%= summary_card title: "Bausparsumme (Contract Amount)" do %>
+    <%= format_money Money.new(account.bauspar_contract.bausparsumme, account.currency) %>
+  <% end %>
+
+  <%= summary_card title: "Provider (Bausparkasse)" do %>
+    <%= account.bauspar_contract.provider || "Unknown" %>
+  <% end %>
+
+  <%= summary_card title: "Contract Number" do %>
+    <%= account.bauspar_contract.contract_number || "Unknown" %>
+  <% end %>
+
+  <%= summary_card title: "Current Phase" do %>
+    <div><%= account.bauspar_contract.phase_description %></div>
+    <% if account.bauspar_contract.saving_phase? %>
+      <div class="text-xs text-gray-500">
+        Progress: <%= number_to_percentage(account.bauspar_contract.savings_progress_percent, precision: 1) %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <% if account.bauspar_contract.saving_phase? || account.bauspar_contract.allocated_phase? %>
+    <%= summary_card title: "Current Balance" do %>
+      <%= format_money account.balance_money %>
+    <% end %>
+  <% end %>
+
+  <% if account.bauspar_contract.allocated_phase? || account.bauspar_contract.loan_phase? %>
+    <%= summary_card title: "Available Loan Amount" do %>
+      <%= format_money account.bauspar_contract.available_loan_amount %>
+    <% end %>
+  <% end %>
+
+  <% if account.bauspar_contract.savings_interest_rate.present? %>
+    <%= summary_card title: "Savings Interest Rate" do %>
+      <%= number_to_percentage(account.bauspar_contract.savings_interest_rate, precision: 3) %>
+      <div class="text-xs text-gray-500">Guthabenzins</div>
+    <% end %>
+  <% end %>
+
+  <% if account.bauspar_contract.loan_interest_rate.present? %>
+    <%= summary_card title: "Loan Interest Rate" do %>
+      <%= number_to_percentage(account.bauspar_contract.loan_interest_rate, precision: 3) %>
+      <div class="text-xs text-gray-500">Darlehenszins</div>
+    <% end %>
+  <% end %>
+</div>
+
+<div class="flex justify-center py-8">
+  <%= render DS::Link.new(
+    text: "Edit Bausparvertrag details",
+    variant: "ghost",
+    href: edit_bauspar_contract_path(account),
+    frame: :modal
+  ) %>
+</div>

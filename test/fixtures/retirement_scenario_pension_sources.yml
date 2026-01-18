@@ -1,0 +1,19 @@
+# Test fixtures for retirement scenario pension sources
+
+riester_source:
+  retirement_scenario: basic
+  account: riester_pension
+  expected_monthly_payout: 285.00
+  payout_start_date: 2040-01-01
+
+ruerup_source:
+  retirement_scenario: basic
+  account: ruerup_pension
+  expected_monthly_payout: 400.00
+  payout_start_date: 2040-01-01
+
+betriebsrente_source:
+  retirement_scenario: basic
+  account: betriebsrente_pension
+  expected_monthly_payout: 800.00
+  payout_start_date: 2040-01-01

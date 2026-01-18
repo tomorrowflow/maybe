@@ -28,9 +28,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `bin/rails db:migrate` - Run pending migrations
 - `bin/rails db:rollback` - Rollback last migration
 - `bin/rails db:seed` - Load seed data
+- `rake demo_data:default` - Load demo data for development
 
 ### Setup
 - `bin/setup` - Initial project setup (installs dependencies, prepares database)
+- Default dev credentials: `user@maybe.local` / `password`
 
 ## Pre-Pull Request CI Workflow
 
@@ -72,10 +74,33 @@ The Maybe app runs in two distinct modes:
 
 ### Core Domain Model
 The application is built around financial data management with these key relationships:
-- **User** → has many **Accounts** → has many **Transactions**
-- **Account** types: checking, savings, credit cards, investments, crypto, loans, properties
-- **Transaction** → belongs to **Category**, can have **Tags** and **Rules**
+- **Family** → has subscription, preferences, and multiple **Users** (admin or member roles)
+- **User** → has many **Accounts** → has many **Entries**
+- **Account** types (delegated types): depository, investment, crypto, property, vehicle, other_asset, credit_card, loan, other_liability
+- **Entry** → delegated type with three subtypes:
+  - **Transaction** - income/expense that alters balance by amount
+  - **Valuation** - absolute value of account on a date
+  - **Trade** - buy/sell of holdings (investment accounts only)
 - **Investment accounts** → have **Holdings** → track **Securities** via **Trades**
+
+### Entry Amount Sign Convention
+The `amount` on an Entry is a signed value:
+- **Negative amount** = "inflow" of money to the account
+  - Credit card: payment (reduces liability)
+  - Checking: income (increases asset)
+  - Investment trade: sell (increases cash)
+- **Positive amount** = "outflow" of money from the account
+
+### Account Balances
+- `Balance` represents account value on a specific date
+- Calculated daily by `Account::BalanceCalculator`
+- For investment accounts: cash balance + holdings value
+- Historical balances power graphs and metrics
+
+### Transfers
+A `Transfer` links two transactions (inflow and outflow) between accounts. Auto-matched when:
+- Different accounts, same currency, opposite values, within 4 days
+- Regular transfers excluded from income/expense; debt payments are expenses
 
 ### API Architecture
 The application provides both internal and external APIs:
@@ -84,16 +109,19 @@ The application provides both internal and external APIs:
 - API responses use Jbuilder templates for JSON rendering
 - Rate limiting via Rack Attack with configurable limits per API key
 
-### Sync & Import System
-Two primary data ingestion methods:
-1. **Plaid Integration**: Real-time bank account syncing
-   - `PlaidItem` manages connections
-   - `Sync` tracks sync operations
-   - Background jobs handle data updates
-2. **CSV Import**: Manual data import with mapping
-   - `Import` manages import sessions
-   - Supports transaction and balance imports
-   - Custom field mapping with transformation rules
+### Sync System
+The app has "syncables" (`Syncable` concern) that can have data synced in the background:
+- **Account sync**: Matches transfers, calculates daily balances/holdings, enriches transactions
+- **PlaidItem sync**: ETL from Plaid API → internal models (triggered for connected accounts)
+- **Family sync**: Orchestrates all account/PlaidItem syncs (runs daily via `AutoSync` concern)
+
+Each sync creates a `Sync` record tracking status and errors.
+
+### Data Providers
+Third-party data (exchange rates, security prices) is accessed through `Provider::Registry`:
+- Providers implement "concepts" (interfaces in `app/models/provider/concepts/`)
+- Domain models use `Provided` concerns for provider access (e.g., `ExchangeRate::Provided`)
+- Self-hosted users can configure different providers at runtime via `Setting`
 
 ### Background Processing
 Sidekiq handles asynchronous tasks:
@@ -114,10 +142,9 @@ Sidekiq handles asynchronous tasks:
   - Use `icon` helper for icons, never `lucide_icon` directly
 
 ### Multi-Currency Support
-- All monetary values stored in base currency (user's primary currency)
-- Exchange rates fetched from Synth API
+- Each Family selects a currency preference as the "main" currency
+- All records normalized to family currency via `ExchangeRate` records
 - `Money` objects handle currency conversion and formatting
-- Historical exchange rates for accurate reporting
 
 ### Security & Authentication
 - Session-based auth for web users
@@ -125,24 +152,6 @@ Sidekiq handles asynchronous tasks:
   - OAuth2 (Doorkeeper) for third-party apps
   - API keys with JWT tokens for direct API access
 - Scoped permissions system for API access
-- Strong parameters and CSRF protection throughout
-
-### Testing Philosophy
-- Comprehensive test coverage using Rails' built-in Minitest
-- Fixtures for test data (avoid FactoryBot)
-- Keep fixtures minimal (2-3 per model for base cases)
-- VCR for external API testing
-- System tests for critical user flows (use sparingly)
-- Test helpers in `test/support/` for common scenarios
-- Only test critical code paths that significantly increase confidence
-- Write tests as you go, when required
-
-### Performance Considerations
-- Database queries optimized with proper indexes
-- N+1 queries prevented via includes/joins
-- Background jobs for heavy operations
-- Caching strategies for expensive calculations
-- Turbo Frames for partial page updates
 
 ### Development Workflow
 - Feature branches merged to `main`
@@ -233,17 +242,18 @@ Sidekiq handles asynchronous tasks:
 - Component controllers stay in component directory, global controllers in `app/javascript/controllers/`
 - Pass data via `data-*-value` attributes, not inline JavaScript
 
-## Testing Philosophy
+## Testing
 
-### General Testing Rules
+### General Rules
 - **ALWAYS use Minitest + fixtures** (NEVER RSpec or factories)
 - Keep fixtures minimal (2-3 per model for base cases)
 - Create edge cases on-the-fly within test context
-- Use Rails helpers for large fixture creation needs
+- Use helpers in `test/support/` for large fixture creation (e.g., `EntriesTestHelper`)
+- VCR for external API testing
+- System tests sparingly (they're slow)
 
 ### Test Quality Guidelines
-- **Write minimal, effective tests** - system tests sparingly
-- **Only test critical and important code paths**
+- **Only test critical code paths** that significantly increase confidence
 - **Test boundaries correctly:**
   - Commands: test they were called with correct params
   - Queries: test output

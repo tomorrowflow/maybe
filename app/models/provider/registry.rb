@@ -67,6 +67,15 @@ class Provider::Registry
 
         Provider::Openai.new(access_token)
       end
+
+      def ollama
+        host = ENV["OLLAMA_HOST"].presence || Setting.ollama_host
+        model = ENV["OLLAMA_MODEL"].presence || Setting.ollama_model
+
+        return nil unless host.present? && model.present?
+
+        Provider::Ollama.new(host: host, model: model)
+      end
   end
 
   def initialize(concept)
@@ -96,7 +105,7 @@ class Provider::Registry
       when :securities
         %i[synth]
       when :llm
-        %i[openai]
+        %i[openai ollama]
       else
         %i[synth plaid_us plaid_eu github openai]
       end

@@ -12,7 +12,10 @@ class Investment < ApplicationRecord
     "mutual_fund" => { short: "Mutual Fund", long: "Mutual Fund" },
     "ira" => { short: "IRA", long: "Traditional IRA" },
     "roth_ira" => { short: "Roth IRA", long: "Roth IRA" },
-    "angel" => { short: "Angel", long: "Angel" }
+    "angel" => { short: "Angel", long: "Angel" },
+    "riester" => { short: "Riester", long: "Riester Pension (Riester-Rente)" },
+    "ruerup" => { short: "Rürup", long: "Rürup Pension (Basisrente)" },
+    "betriebsrente" => { short: "Betriebsrente", long: "Occupational Pension (Betriebliche Altersvorsorge)" }
   }.freeze
 
   class << self

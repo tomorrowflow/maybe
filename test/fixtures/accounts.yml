@@ -90,3 +90,33 @@ crypto:
   accountable_type: Crypto
   accountable: one
   status: active
+
+riester_pension:
+  family: dylan_family
+  name: DWS Riester-Rente
+  balance: 25000
+  currency: EUR
+  subtype: riester
+  accountable_type: Investment
+  accountable: riester_pension
+  status: active
+
+ruerup_pension:
+  family: dylan_family
+  name: Allianz Rürup-Rente
+  balance: 35000
+  currency: EUR
+  subtype: ruerup
+  accountable_type: Investment
+  accountable: ruerup_pension
+  status: active
+
+betriebsrente_pension:
+  family: dylan_family
+  name: Company Pension Plan
+  balance: 50000
+  currency: EUR
+  subtype: betriebsrente
+  accountable_type: Investment
+  accountable: betriebsrente
+  status: active

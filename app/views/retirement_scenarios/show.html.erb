@@ -1,0 +1,276 @@
+<div class="space-y-6 max-w-5xl mx-auto">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-primary"><%= @scenario.name %></h1>
+    <div class="flex gap-2">
+      <%= button_to "Recalculate", recalculate_retirement_scenario_path(@scenario), method: :post, class: "btn btn--secondary" %>
+      <%= link_to "Edit", edit_retirement_scenario_path(@scenario), class: "btn btn--ghost" %>
+    </div>
+  </div>
+
+  <!-- Retirement Readiness Card -->
+  <div class="bg-container rounded-xl p-6 shadow-border-xs">
+    <h2 class="text-lg font-semibold text-primary mb-4">Retirement Readiness</h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div>
+        <div class="text-sm text-secondary">Current Portfolio</div>
+        <div class="text-2xl font-bold text-primary"><%= format_money @scenario.current_portfolio_value_money %></div>
+      </div>
+
+      <div>
+        <div class="text-sm text-secondary">Required Portfolio</div>
+        <div class="text-2xl font-bold <%= @scenario.can_retire_now? ? "text-green-600" : "text-primary" %>">
+          <%= format_money @scenario.required_portfolio_value_money %>
+        </div>
+      </div>
+
+      <div>
+        <div class="text-sm text-secondary">Gap</div>
+        <div class="text-2xl font-bold <%= @scenario.can_retire_now? ? "text-green-600" : "text-red-600" %>">
+          <% if @scenario.can_retire_now? %>
+            <%= icon "check", class: "w-6 h-6 inline" %> Ready!
+          <% else %>
+            <%= format_money @scenario.portfolio_gap_money %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="mb-4">
+      <div class="flex justify-between text-sm mb-1">
+        <span class="text-secondary">Progress</span>
+        <span class="font-semibold text-primary"><%= number_to_percentage(@scenario.progress_percent, precision: 1) %></span>
+      </div>
+      <div class="w-full bg-alpha-black-100 rounded-full h-4">
+        <div class="bg-green-600 h-4 rounded-full transition-all" style="width: <%= [ @scenario.progress_percent, 100 ].min %>%"></div>
+      </div>
+    </div>
+
+    <!-- Retirement Date -->
+    <% if @scenario.can_retire_now? %>
+      <div class="p-4 bg-green-500/10 border border-green-500/20 rounded-lg text-center">
+        <div class="text-lg font-semibold text-green-700"><%= icon "check", class: "w-5 h-5 inline mr-1" %> You can retire today!</div>
+      </div>
+    <% elsif @scenario.projected_retirement_date %>
+      <div class="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg text-center">
+        <div class="text-sm text-secondary">Projected Retirement Date</div>
+        <div class="text-xl font-bold text-blue-700"><%= @scenario.projected_retirement_date.strftime("%B %Y") %></div>
+        <div class="text-sm text-secondary">(<%= @scenario.years_until_retirement %> years from now)</div>
+      </div>
+    <% else %>
+      <div class="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-center">
+        <div class="text-sm text-yellow-700">Unable to project retirement date with current savings rate</div>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Income Breakdown Card -->
+  <div class="bg-container rounded-xl p-6 shadow-border-xs">
+    <h2 class="text-lg font-semibold text-primary mb-4">Income Breakdown</h2>
+
+    <div class="space-y-3">
+      <div class="flex justify-between">
+        <span class="font-medium text-primary">Monthly Expenses in Retirement:</span>
+        <span class="text-primary"><%= format_money @scenario.retirement_monthly_expenses_money %></span>
+      </div>
+
+      <div class="border-t border-secondary pt-3">
+        <div class="font-medium text-primary mb-2">Pension Income Sources:</div>
+
+        <% if @scenario.gesetzliche_rente_monthly.present? %>
+          <div class="flex justify-between text-sm">
+            <span class="text-secondary">Gesetzliche Rente:</span>
+            <span class="text-primary"><%= format_money @scenario.gesetzliche_rente_monthly_money %></span>
+          </div>
+        <% end %>
+
+        <% @scenario.pension_sources.with_payout.includes(:account).each do |pension_source| %>
+          <div class="flex justify-between text-sm">
+            <span class="text-secondary"><%= pension_source.account.name %> (<%= pension_source.account.short_subtype_label %>):</span>
+            <span class="text-primary"><%= format_money pension_source.expected_monthly_payout_money %></span>
+          </div>
+        <% end %>
+
+        <% if @scenario.other_pension_monthly.present? %>
+          <div class="flex justify-between text-sm">
+            <span class="text-secondary">Other Pension:</span>
+            <span class="text-primary"><%= format_money @scenario.other_pension_monthly_money %></span>
+          </div>
+        <% end %>
+
+        <div class="flex justify-between font-semibold border-t border-secondary mt-2 pt-2">
+          <span class="text-primary">Total Pensions:</span>
+          <span class="text-primary">
+            <%= format_money @scenario.total_pension_income_money %>
+            <span class="text-sm text-secondary">(<%= number_to_percentage(@scenario.pension_coverage_percent, precision: 0) %>)</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="border-t border-secondary pt-3">
+        <div class="flex justify-between font-medium">
+          <span class="text-primary">Portfolio Must Cover:</span>
+          <span class="<%= @scenario.pension_self_sufficient? ? "text-green-600" : "text-primary" %>">
+            <%= format_money @scenario.income_gap_monthly_money %>
+            <span class="text-sm text-secondary">(<%= 100 - @scenario.pension_coverage_percent %>%)</span>
+          </span>
+        </div>
+
+        <% if @scenario.pension_self_sufficient? %>
+          <div class="text-sm text-green-600 mt-1"><%= icon "check", class: "w-4 h-4 inline" %> Pensions fully cover your expenses!</div>
+        <% end %>
+      </div>
+
+      <div class="border-t border-secondary pt-3">
+        <div class="flex justify-between text-sm">
+          <span class="text-secondary">Using <%= number_to_percentage(@scenario.portfolio_withdrawal_rate, precision: 1) %> withdrawal rate:</span>
+        </div>
+        <div class="flex justify-between font-medium">
+          <span class="text-primary">Required Portfolio for Gap:</span>
+          <span class="text-primary"><%= format_money @scenario.required_portfolio_value_money %></span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-primary">Your Current Portfolio:</span>
+          <span class="font-semibold <%= @scenario.can_retire_now? ? "text-green-600" : "text-primary" %>">
+            <%= format_money @scenario.current_portfolio_value_money %>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Explanation Card -->
+  <div class="bg-surface-inset rounded-xl p-6">
+    <h3 class="text-base font-semibold text-primary mb-3">How This Works</h3>
+    <div class="text-sm text-secondary space-y-2">
+      <% if @scenario.pension_self_sufficient? %>
+        <p>
+          Your combined pension income of <%= format_money @scenario.total_pension_income_money %>/month
+          fully covers your expected expenses of <%= format_money @scenario.retirement_monthly_expenses_money %>/month.
+          You don't need to rely on your portfolio for regular income!
+        </p>
+      <% else %>
+        <p>
+          Your pensions will cover <%= format_money @scenario.total_pension_income_money %> of your
+          <%= format_money @scenario.retirement_monthly_expenses_money %> monthly expenses
+          (<%= number_to_percentage(@scenario.pension_coverage_percent, precision: 0) %> coverage).
+        </p>
+        <p>
+          Your portfolio only needs to cover the <%= format_money @scenario.income_gap_monthly_money %> gap.
+          Using a <%= number_to_percentage(@scenario.portfolio_withdrawal_rate, precision: 1) %> withdrawal rate:
+        </p>
+        <p class="font-mono text-xs bg-container p-2 rounded-lg text-primary">
+          <%= format_money @scenario.income_gap_monthly_money %>/month × 12 months ÷ <%= @scenario.portfolio_withdrawal_rate / 100.0 %> = <%= format_money @scenario.required_portfolio_value_money %>
+        </p>
+        <% if @scenario.can_retire_now? %>
+          <p class="text-green-700 font-medium">
+            Since you have <%= format_money @scenario.current_portfolio_value_money %>, you're ready to retire!
+          </p>
+        <% else %>
+          <p>
+            At your current savings rate, you'll reach this goal in approximately
+            <strong class="text-primary"><%= @scenario.years_until_retirement %> years</strong>
+            (<%= @scenario.projected_retirement_date&.strftime("%B %Y") %>).
+          </p>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Portfolio Growth Projection Card -->
+  <% if @scenario.portfolio_growth_rate.present? %>
+    <% projection_months = [ @scenario.months_until_retirement || 360, 360 ].min %>
+    <% projections = @scenario.generate_projections(months: projection_months) %>
+
+    <div class="bg-container rounded-xl p-6 shadow-border-xs">
+      <h2 class="text-lg font-semibold text-primary mb-4">Portfolio Growth Projection</h2>
+
+      <!-- Summary Stats -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div>
+          <div class="text-sm text-secondary">Starting Value</div>
+          <div class="text-lg font-bold text-primary"><%= format_money @scenario.current_portfolio_value_money %></div>
+        </div>
+
+        <div>
+          <div class="text-sm text-secondary">Contributions</div>
+          <div class="text-lg font-bold text-blue-600">
+            +<%= format_money Money.new(@scenario.total_contributions_projected(projections.length), @scenario.family.currency) %>
+          </div>
+        </div>
+
+        <div>
+          <div class="text-sm text-secondary">Investment Returns</div>
+          <div class="text-lg font-bold text-green-600">
+            +<%= format_money Money.new(@scenario.total_returns_projected(projections.length), @scenario.family.currency) %>
+          </div>
+        </div>
+
+        <div>
+          <div class="text-sm text-secondary">Final Value</div>
+          <div class="text-lg font-bold text-primary">
+            <%= format_money Money.new(projections.last[:portfolio_value], @scenario.family.currency) %>
+          </div>
+        </div>
+      </div>
+
+      <!-- Growth Rate Info -->
+      <div class="p-4 bg-surface-inset rounded-lg mb-4 text-sm">
+        <div class="grid grid-cols-3 gap-4">
+          <div>
+            <span class="text-secondary">Nominal Return:</span>
+            <span class="font-semibold text-primary"><%= number_to_percentage(@scenario.portfolio_growth_rate, precision: 1) %></span>
+          </div>
+          <% if @scenario.inflation_rate.present? %>
+            <div>
+              <span class="text-secondary">Inflation:</span>
+              <span class="font-semibold text-primary"><%= number_to_percentage(@scenario.inflation_rate, precision: 1) %></span>
+            </div>
+            <div>
+              <span class="text-secondary">Real Return:</span>
+              <span class="font-semibold text-green-700"><%= number_to_percentage(@scenario.real_portfolio_growth_rate, precision: 1) %></span>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Simple Timeline Visualization -->
+      <div class="bg-surface-inset p-4 rounded-lg">
+        <div class="mb-3 font-semibold text-sm text-primary">Portfolio Value Over Time</div>
+        <%
+          max_value = projections.map { |p| p[:portfolio_value] }.max
+          required = @scenario.required_portfolio_value
+        %>
+        <div class="space-y-1">
+          <% projections.each_with_index do |p, i| %>
+            <% next unless i % 12 == 0 || (p[:can_retire] && !@scenario.can_retire_now?) %>
+            <div class="flex items-center gap-2 text-xs">
+              <span class="w-12 text-secondary"><%= p[:date].year %></span>
+              <div class="flex-1 bg-alpha-black-100 h-6 relative rounded">
+                <div class="bg-blue-500 h-6 rounded transition-all" style="width: <%= (p[:portfolio_value] / max_value * 100).round(1) %>%"></div>
+                <% if required > 0 %>
+                  <div class="absolute top-0 h-6 w-0.5 bg-green-500" style="left: <%= (required / max_value * 100).round(1) %>%"></div>
+                <% end %>
+              </div>
+              <span class="w-28 text-right font-mono text-primary"><%= number_to_currency(p[:portfolio_value], precision: 0) %></span>
+              <% if p[:can_retire] && !@scenario.can_retire_now? && i % 12 == 0 %>
+                <span class="text-green-600 text-xs">← Retirement!</span>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+        <div class="text-xs text-secondary mt-3">
+          <span class="inline-block w-3 h-3 bg-blue-500 rounded mr-1"></span> Portfolio value
+          <span class="inline-block w-3 h-0.5 bg-green-500 ml-3 mr-1"></span> Required: <%= format_money @scenario.required_portfolio_value_money %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="text-xs text-secondary text-center">
+    Last calculated: <%= @scenario.calculation_date.strftime("%B %d, %Y") %>
+    using portfolio value of <%= format_money @scenario.current_portfolio_value_money %>
+  </div>
+</div>

@@ -94,6 +94,15 @@ Rails.application.routes.draw do
     resources :budget_categories, only: %i[index show update]
   end
 
+  resources :retirement_scenarios do
+    member do
+      post :recalculate
+    end
+  end
+
+  # Shortcut for Planning nav item
+  get "planning", to: redirect("/retirement_scenarios")
+
   resources :family_merchants, only: %i[index new create edit update destroy]
 
   resources :transfers, only: %i[new create destroy show update]
@@ -188,6 +197,8 @@ Rails.application.routes.draw do
   resources :vehicles, only: %i[new create edit update]
   resources :credit_cards, only: %i[new create edit update]
   resources :loans, only: %i[new create edit update]
+  resources :insurances, only: %i[new create edit update]
+  resources :bauspar_contracts, only: %i[new create edit update]
   resources :cryptos, only: %i[new create edit update]
   resources :other_assets, only: %i[new create edit update]
   resources :other_liabilities, only: %i[new create edit update]

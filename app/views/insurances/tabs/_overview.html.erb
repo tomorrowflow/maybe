@@ -1,0 +1,48 @@
+<%# locals: (account:) %>
+
+<div class="grid grid-cols-3 gap-2">
+  <%= summary_card title: "Provider" do %>
+    <%= account.insurance.provider || "Unknown" %>
+  <% end %>
+
+  <%= summary_card title: "Policy Number" do %>
+    <%= account.insurance.policy_number || "Unknown" %>
+  <% end %>
+
+  <%= summary_card title: "Cash Surrender Value" do %>
+    <%= format_money account.insurance.cash_value %>
+  <% end %>
+
+  <% if account.insurance.premium_amount.present? %>
+    <%= summary_card title: "Premium" do %>
+      <%= number_to_currency(account.insurance.premium_amount) %>
+      <% if account.insurance.premium_frequency.present? %>
+        <div class="text-xs text-gray-500"><%= account.insurance.premium_frequency.titleize %></div>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <% if account.insurance.annual_premium.present? %>
+    <%= summary_card title: "Annual Premium" do %>
+      <%= format_money(account.insurance.annual_premium) %>
+    <% end %>
+  <% end %>
+
+  <% if account.insurance.maturity_date.present? %>
+    <%= summary_card title: "Maturity Date" do %>
+      <div><%= account.insurance.maturity_date.strftime("%b %d, %Y") %></div>
+      <% if account.insurance.years_until_maturity.present? %>
+        <div class="text-xs text-gray-500"><%= pluralize(account.insurance.years_until_maturity, "year") %> remaining</div>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>
+
+<div class="flex justify-center py-8">
+  <%= render DS::Link.new(
+    text: "Edit insurance details",
+    variant: "ghost",
+    href: edit_insurance_path(account),
+    frame: :modal
+  ) %>
+</div>

@@ -1,0 +1,47 @@
+<%# locals: (account:, url:) %>
+
+<%= render "accounts/form", account: account, url: url do |form| %>
+  <%= render "shared/ruler", classes: "my-4" %>
+
+  <div class="space-y-2">
+    <%= form.fields_for :accountable do |insurance_form| %>
+      <div class="flex items-center gap-2">
+        <%= insurance_form.text_field :provider,
+                                     label: "Insurance Provider",
+                                     placeholder: "e.g., Allianz, AXA" %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= insurance_form.text_field :policy_number,
+                                     label: "Policy Number",
+                                     placeholder: "Contract or policy number" %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= insurance_form.number_field :premium_amount,
+                                       label: "Premium Amount",
+                                       placeholder: "Monthly premium",
+                                       min: 0,
+                                       step: 0.01 %>
+        <%= insurance_form.select :premium_frequency,
+                                 [["Monthly", "monthly"], ["Quarterly", "quarterly"], ["Semi-Annual", "semi_annual"], ["Annual", "annual"]],
+                                 { label: "Frequency", prompt: "Select frequency" } %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= insurance_form.date_field :maturity_date,
+                                     label: "Maturity Date",
+                                     helper_text: "When does the policy mature?" %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= insurance_form.number_field :cash_surrender_value,
+                                       label: "Cash Surrender Value (Rückkaufswert)",
+                                       placeholder: "Current cash value",
+                                       helper_text: "The current value if you cancel the policy",
+                                       min: 0,
+                                       step: 0.01 %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

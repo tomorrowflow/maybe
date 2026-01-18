@@ -1,0 +1,58 @@
+<%# locals: (account:, url:) %>
+
+<%= render "accounts/form", account: account, url: url do |form| %>
+  <%= render "shared/ruler", classes: "my-4" %>
+
+  <div class="space-y-2">
+    <%= form.fields_for :accountable do |bauspar_form| %>
+      <div class="flex items-center gap-2">
+        <%= bauspar_form.number_field :bausparsumme,
+                                     label: "Bausparsumme (Contract Amount)",
+                                     placeholder: "50000",
+                                     helper_text: "Total contract amount",
+                                     required: true,
+                                     min: 0,
+                                     step: 0.01 %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= bauspar_form.text_field :provider,
+                                   label: "Bausparkasse (Provider)",
+                                   placeholder: "e.g., Schwäbisch Hall, LBS" %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= bauspar_form.text_field :contract_number,
+                                   label: "Contract Number",
+                                   placeholder: "Contract number" %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= bauspar_form.select :phase,
+                               [["Savings Phase (Ansparphase)", "saving"],
+                                ["Allocated (Zuteilung)", "allocated"],
+                                ["Loan Phase (Darlehensphase)", "loan"],
+                                ["Closed", "closed"]],
+                               { label: "Current Phase" } %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= bauspar_form.number_field :savings_interest_rate,
+                                     label: "Savings Interest Rate (Guthabenzins)",
+                                     placeholder: "0.25",
+                                     helper_text: "Interest rate during savings phase (%)",
+                                     min: 0,
+                                     step: 0.001 %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= bauspar_form.number_field :loan_interest_rate,
+                                     label: "Loan Interest Rate (Darlehenszins)",
+                                     placeholder: "2.35",
+                                     helper_text: "Interest rate during loan phase (%)",
+                                     min: 0,
+                                     step: 0.001 %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
