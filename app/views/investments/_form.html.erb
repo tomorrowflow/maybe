@@ -1,7 +1,33 @@
 <%# locals: (account:, url:) %>
 
 <%= render "accounts/form", account: account, url: url do |form| %>
-  <%= form.select :subtype,
-                 Investment::SUBTYPES.map { |k, v| [v[:long], k] },
-                 { label: true, prompt: t("investments.form.subtype_prompt"), include_blank: t("investments.form.none") } %>
+  <div data-controller="investment-form">
+    <%= form.select :subtype,
+                   Investment::SUBTYPES.map { |k, v| [v[:long], k] },
+                   { label: true, prompt: t("investments.form.subtype_prompt"), include_blank: t("investments.form.none") },
+                   { data: { action: "change->investment-form#togglePensionFields" } } %>
+
+    <%= form.fields_for :accountable do |accountable_form| %>
+      <div id="pension-fields"
+           class="<%= 'hidden' unless account.subtype.in?(Investment::GERMAN_PENSION_SUBTYPES || []) %>"
+           data-investment-form-target="pensionFields">
+        <div class="border-t border-secondary pt-4 mt-4">
+          <p class="text-sm font-medium text-primary mb-3">Pension Payout Details</p>
+          <div class="grid grid-cols-2 gap-4">
+            <%= accountable_form.date_field :retirement_date,
+                                            label: "Retirement Date" %>
+
+            <%= accountable_form.number_field :expected_monthly_payout,
+                                              label: "Expected Monthly Payout",
+                                              placeholder: "500",
+                                              min: 0,
+                                              step: 10 %>
+          </div>
+          <p class="text-xs text-secondary mt-2">
+            These values will be used in retirement planning calculations.
+          </p>
+        </div>
+      </div>
+    <% end %>
+  </div>
 <% end %>

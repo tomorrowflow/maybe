@@ -5,6 +5,9 @@ basic:
   retirement_monthly_expenses: 4000
   portfolio_withdrawal_rate: 4.0
   gesetzliche_rente_monthly: 1500
+  current_annual_salary: 72000
+  salary_end_date: <%= Date.today + 10.years %>
+  gesetzliche_rente_start_date: <%= Date.today + 10.years + 1.month %>
 
 conservative_plan:
   family: dylan_family
@@ -13,6 +16,20 @@ conservative_plan:
   retirement_monthly_expenses: 3500
   portfolio_withdrawal_rate: 3.5
   gesetzliche_rente_monthly: 1500
+  current_annual_salary: 60000
+  salary_end_date: <%= Date.today + 15.years %>
+  gesetzliche_rente_start_date: <%= Date.today + 15.years %>
+
+with_gap:
+  family: dylan_family
+  name: "Plan With Gap"
+  calculation_date: <%= Date.today %>
+  retirement_monthly_expenses: 4000
+  portfolio_withdrawal_rate: 4.0
+  gesetzliche_rente_monthly: 1500
+  current_annual_salary: 72000
+  salary_end_date: <%= Date.new(2040, 12, 31) %>
+  gesetzliche_rente_start_date: <%= Date.new(2042, 1, 1) %>
 
 optimistic_plan:
   family: dylan_family
@@ -22,3 +39,7 @@ optimistic_plan:
   portfolio_withdrawal_rate: 5.0
   gesetzliche_rente_monthly: 1500
   other_pension_monthly: 500
+  current_annual_salary: 84000
+  salary_end_date: <%= Date.today + 8.years %>
+  gesetzliche_rente_start_date: <%= Date.today + 8.years %>
+  other_pension_start_date: <%= Date.today + 8.years %>

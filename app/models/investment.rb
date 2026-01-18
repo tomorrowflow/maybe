@@ -18,6 +18,8 @@ class Investment < ApplicationRecord
     "betriebsrente" => { short: "Betriebsrente", long: "Occupational Pension (Betriebliche Altersvorsorge)" }
   }.freeze
 
+  GERMAN_PENSION_SUBTYPES = %w[riester ruerup betriebsrente].freeze
+
   class << self
     def color
       "#1570EF"
@@ -30,5 +32,28 @@ class Investment < ApplicationRecord
     def icon
       "line-chart"
     end
+  end
+
+  # Check if this investment is a German pension product
+  def german_pension?
+    account&.subtype.in?(GERMAN_PENSION_SUBTYPES)
+  end
+
+  # Expected monthly payout as Money object
+  def expected_monthly_payout_money
+    return nil unless expected_monthly_payout && account&.currency
+    Money.new(expected_monthly_payout, account.currency)
+  end
+
+  # Years until retirement payout begins
+  def years_until_retirement
+    return nil unless retirement_date
+    ((retirement_date - Date.today).to_f / 365.25).ceil
+  end
+
+  # Check if retirement date has passed (payout phase)
+  def in_payout_phase?
+    return false unless retirement_date
+    Date.today >= retirement_date
   end
 end

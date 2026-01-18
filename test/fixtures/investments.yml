@@ -1,10 +1,13 @@
 one: {}
 
 riester_pension:
-  {}
+  retirement_date: 2040-01-01
+  expected_monthly_payout: 285.00
 
 ruerup_pension:
-  {}
+  retirement_date: 2040-01-01
+  expected_monthly_payout: 400.00
 
 betriebsrente:
-  {}
+  retirement_date: 2040-01-01
+  expected_monthly_payout: 800.00

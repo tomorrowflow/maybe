@@ -2,10 +2,19 @@
   <%= render "retirement_scenarios/wizard_nav", current_step: @step %>
 <% end %>
 
-<%= content_for :previous_path, retirement_scenario_path(@scenario) %>
+<%= content_for :prev_nav do %>
+  <button type="button"
+          class="inline-flex items-center justify-center w-9 h-9 rounded-lg hover:bg-gray-100 theme-dark:hover:bg-gray-700"
+          onclick="document.dispatchEvent(new CustomEvent('retirement-wizard:back'))">
+    <%= icon "arrow-left", class: "w-5 h-5 text-secondary" %>
+  </button>
+<% end %>
+
 <%= content_for :cancel_path, retirement_scenario_path(@scenario) %>
 
-<div data-controller="retirement-wizard" data-retirement-wizard-current-step-value="<%= @step %>">
+<div data-controller="retirement-wizard"
+     data-retirement-wizard-current-step-value="<%= @step %>"
+     data-retirement-wizard-exit-path-value="<%= retirement_scenario_path(@scenario) %>">
   <div class="space-y-4">
     <%= styled_form_with model: @scenario, url: retirement_scenario_path(@scenario), method: :patch, class: "space-y-6" do |form| %>
       <!-- Step 1: Basics -->
@@ -92,30 +101,52 @@
 
             <% if @scenario.pension_sources.any? %>
               <div class="space-y-3">
-                <% @scenario.pension_sources.each_with_index do |pension_source, index| %>
-                  <%= form.fields_for :pension_sources, pension_source, index: index do |ps_form| %>
-                    <%= ps_form.hidden_field :id if pension_source.persisted? %>
-                    <%= ps_form.hidden_field :account_id %>
+                <%= form.fields_for :pension_sources do |ps_form| %>
+                  <% pension_source = ps_form.object %>
+                  <%= ps_form.hidden_field :id if pension_source.persisted? %>
+                  <%= ps_form.hidden_field :account_id %>
                     <div class="bg-surface-inset rounded-lg p-4">
-                      <div class="flex items-center gap-3 mb-3">
-                        <%= icon "line-chart", class: "w-5 h-5 text-blue-600" %>
-                        <div>
-                          <div class="font-medium text-primary"><%= pension_source.account.name %></div>
-                          <div class="text-xs text-secondary"><%= pension_source.account.long_subtype_label %></div>
+                      <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                          <%= icon "line-chart", class: "w-5 h-5 text-blue-600" %>
+                          <div>
+                            <div class="font-medium text-primary"><%= pension_source.account.name %></div>
+                            <div class="text-xs text-secondary"><%= pension_source.account.long_subtype_label %></div>
+                          </div>
+                        </div>
+                        <div class="text-right">
+                          <div class="text-sm font-medium text-primary"><%= format_money pension_source.account.balance_money %></div>
+                          <div class="text-xs text-secondary">Current Value</div>
                         </div>
                       </div>
                       <div class="grid grid-cols-2 gap-3">
-                        <%= ps_form.number_field :expected_monthly_payout,
-                                                 label: "Expected Monthly Payout",
-                                                 placeholder: "500",
-                                                 min: 0,
-                                                 step: 10 %>
-                        <%= ps_form.date_field :payout_start_date,
-                                               label: "Payout Start Date" %>
+                        <div>
+                          <%= ps_form.number_field :expected_monthly_payout,
+                                                   label: "Expected Monthly Payout",
+                                                   placeholder: pension_source.account_expected_monthly_payout || "500",
+                                                   min: 0,
+                                                   step: 10 %>
+                          <% if pension_source.account_expected_monthly_payout.present? && pension_source.expected_monthly_payout.blank? %>
+                            <p class="text-xs text-green-600 mt-1">From account: <%= number_to_currency(pension_source.account_expected_monthly_payout) %></p>
+                          <% end %>
+                        </div>
+                        <div>
+                          <%= ps_form.date_field :payout_start_date,
+                                                 label: "Payout Start Date" %>
+                          <% if pension_source.account_retirement_date.present? && pension_source.payout_start_date.blank? %>
+                            <p class="text-xs text-green-600 mt-1">From account: <%= pension_source.account_retirement_date.strftime("%b %Y") %></p>
+                          <% end %>
+                        </div>
                       </div>
                     </div>
-                  <% end %>
                 <% end %>
+              </div>
+
+              <div class="border border-tertiary rounded-lg p-3 mt-3 flex gap-3">
+                <%= icon "info", class: "w-4 h-4 text-secondary shrink-0 mt-0.5" %>
+                <p class="text-xs text-secondary">
+                  Values are pre-filled from your pension account settings. You can override them here for this scenario.
+                </p>
               </div>
             <% else %>
               <div class="bg-surface-inset rounded-lg p-4 text-center">
@@ -199,14 +230,14 @@
                                     max: 20 %>
             </div>
 
-            <%= form.number_field :monthly_contribution,
-                                  label: "Monthly Contribution",
-                                  placeholder: "Leave blank to auto-calculate",
-                                  min: 0,
-                                  step: 10,
-                                  class: "mt-4" %>
-
-            <p class="text-xs text-secondary mt-1">If blank, we'll calculate from your savings history.</p>
+            <div class="mt-4">
+              <%= form.number_field :monthly_contribution,
+                                    label: "Monthly Contribution",
+                                    placeholder: "Leave blank to auto-calculate",
+                                    min: 0,
+                                    step: 10 %>
+              <p class="text-xs text-secondary mt-1">If blank, we'll calculate from your savings history.</p>
+            </div>
           </div>
 
           <div class="border border-blue-200 bg-blue-50 theme-dark:border-blue-800 theme-dark:bg-blue-900/20 rounded-lg p-4 flex gap-3">

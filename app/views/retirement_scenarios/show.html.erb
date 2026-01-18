@@ -3,8 +3,19 @@
   <div class="flex items-center justify-between">
     <h1 class="text-2xl font-bold text-primary"><%= @scenario.name %></h1>
     <div class="flex gap-2">
-      <%= button_to "Recalculate", recalculate_retirement_scenario_path(@scenario), method: :post, class: "btn btn--secondary" %>
-      <%= link_to "Edit", edit_retirement_scenario_path(@scenario), class: "btn btn--ghost" %>
+      <%= render DS::Button.new(
+        text: "Recalculate",
+        icon: "refresh-cw",
+        variant: :secondary,
+        href: recalculate_retirement_scenario_path(@scenario),
+        method: :post
+      ) %>
+      <%= render DS::Link.new(
+        text: "Edit",
+        icon: "pencil",
+        variant: :outline,
+        href: edit_retirement_scenario_path(@scenario)
+      ) %>
     </div>
   </div>
 
@@ -141,6 +152,124 @@
     </div>
   </div>
 
+  <!-- Income Stream Planning Section -->
+  <div class="bg-container rounded-xl p-6 shadow-border-xs">
+    <h2 class="text-lg font-semibold text-primary mb-4">Income Stream Planning</h2>
+
+    <!-- Gap Period Warning -->
+    <% gap = @scenario.gap_period %>
+    <% if gap %>
+      <div class="mb-6 p-4 rounded-lg <%= @scenario.can_bridge_gap? ? "bg-yellow-500/10 border border-yellow-500/20" : "bg-red-500/10 border border-red-500/20" %>">
+        <div class="flex items-start gap-3">
+          <div class="flex-shrink-0">
+            <%= icon "alert-triangle", class: "w-5 h-5 #{@scenario.can_bridge_gap? ? 'text-yellow-600' : 'text-red-600'}" %>
+          </div>
+          <div class="flex-1">
+            <h3 class="font-semibold <%= @scenario.can_bridge_gap? ? "text-yellow-800" : "text-red-800" %>">
+              <%= gap[:months] %>-Month Income Gap Detected
+            </h3>
+            <p class="text-sm mt-1 <%= @scenario.can_bridge_gap? ? "text-yellow-700" : "text-red-700" %>">
+              Between <%= gap[:start_date].strftime("%B %Y") %> and <%= gap[:end_date].strftime("%B %Y") %>,
+              you'll have no regular income. You'll need to bridge this gap with savings.
+            </p>
+            <div class="mt-3 grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <span class="text-secondary">Monthly Need:</span>
+                <span class="font-semibold text-primary"><%= format_money Money.new(gap[:monthly_shortfall], @scenario.family.currency) %></span>
+              </div>
+              <div>
+                <span class="text-secondary">Total Gap:</span>
+                <span class="font-semibold text-primary"><%= format_money @scenario.gap_bridge_amount_money %></span>
+              </div>
+              <div>
+                <span class="text-secondary">Portfolio Coverage:</span>
+                <% if @scenario.can_bridge_gap? %>
+                  <span class="font-semibold text-green-600"><%= icon "check", class: "w-4 h-4 inline" %> Covered</span>
+                <% else %>
+                  <span class="font-semibold text-red-600"><%= icon "x", class: "w-4 h-4 inline" %> Insufficient</span>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% elsif @scenario.salary_end_date.present? && @scenario.earliest_pension_start_date.present? %>
+      <div class="mb-6 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+        <div class="flex items-center gap-3">
+          <%= icon "check-circle", class: "w-5 h-5 text-green-600" %>
+          <span class="text-green-800 font-medium">No income gap - pension starts before salary ends!</span>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Key Milestones -->
+    <% milestones = @scenario.income_milestones %>
+    <% if milestones.any? %>
+      <div class="mb-6">
+        <h3 class="text-sm font-semibold text-secondary mb-3">Key Milestones</h3>
+        <div class="flex flex-wrap gap-2">
+          <% milestones.reject { |m| m[:type] == :gap_start || m[:type] == :gap_end }.each do |milestone| %>
+            <%
+              badge_colors = {
+                salary_end: "bg-red-100 text-red-800 border-red-200",
+                state_pension_start: "bg-green-100 text-green-800 border-green-200",
+                private_pension_start: "bg-purple-100 text-purple-800 border-purple-200",
+                other_pension_start: "bg-orange-100 text-orange-800 border-orange-200"
+              }
+              color_class = badge_colors[milestone[:type]] || "bg-gray-100 text-gray-800 border-gray-200"
+            %>
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border <%= color_class %>">
+              <span class="font-medium"><%= milestone[:label] %></span>
+              <span class="opacity-75"><%= milestone[:date].strftime("%b %Y") %></span>
+              <% if milestone[:amount] %>
+                <span class="font-semibold"><%= format_money Money.new(milestone[:amount], @scenario.family.currency) %>/mo</span>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Income Snapshot Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div class="bg-surface-inset rounded-lg p-4">
+        <div class="text-sm text-secondary">Today's Income</div>
+        <div class="text-xl font-bold text-primary"><%= format_money @scenario.income_at_today_money %></div>
+        <div class="text-xs text-secondary">per month</div>
+      </div>
+
+      <% if @scenario.income_at_retirement %>
+        <div class="bg-surface-inset rounded-lg p-4">
+          <div class="text-sm text-secondary">At Retirement</div>
+          <div class="text-xl font-bold <%= @scenario.income_at_retirement.to_f > 0 ? "text-primary" : "text-red-600" %>">
+            <%= format_money @scenario.income_at_retirement_money %>
+          </div>
+          <div class="text-xs text-secondary">per month (after salary ends)</div>
+        </div>
+      <% end %>
+
+      <div class="bg-surface-inset rounded-lg p-4">
+        <div class="text-sm text-secondary">Full Pension Income</div>
+        <div class="text-xl font-bold text-green-600"><%= format_money @scenario.income_at_full_pension_money %></div>
+        <div class="text-xs text-secondary">per month (all pensions active)</div>
+      </div>
+    </div>
+
+    <!-- Income Timeline Chart -->
+    <% if @scenario.salary_end_date.present? || @scenario.gesetzliche_rente_start_date.present? || @scenario.pension_sources.with_payout.any? %>
+      <div class="mb-4">
+        <h3 class="text-sm font-semibold text-secondary mb-3">Income Timeline</h3>
+        <% timeline_builder = RetirementScenario::IncomeTimelineBuilder.new(@scenario) %>
+        <% chart_data = timeline_builder.build_chart_data(years: 25) %>
+        <div id="income-timeline-chart-<%= @scenario.id %>" class="w-full h-80" data-controller="income-timeline-chart" data-income-timeline-chart-data-value="<%= chart_data.to_json %>"></div>
+      </div>
+    <% else %>
+      <div class="p-4 bg-surface-inset rounded-lg text-center text-secondary">
+        <p>Add salary end date and pension start dates to see your income timeline.</p>
+      </div>
+    <% end %>
+  </div>
+
   <!-- Explanation Card -->
   <div class="bg-surface-inset rounded-xl p-6">
     <h3 class="text-base font-semibold text-primary mb-3">How This Works</h3>
@@ -181,9 +310,10 @@
 
   <!-- Portfolio Growth Projection Card -->
   <% if @scenario.portfolio_growth_rate.present? %>
-    <% projection_months = [ @scenario.months_until_retirement || 360, 360 ].min %>
+    <% projection_months = [ [ @scenario.months_until_retirement || 360, 12 ].max, 360 ].min %>
     <% projections = @scenario.generate_projections(months: projection_months) %>
 
+    <% if projections.any? %>
     <div class="bg-container rounded-xl p-6 shadow-border-xs">
       <h2 class="text-lg font-semibold text-primary mb-4">Portfolio Growth Projection</h2>
 
@@ -267,6 +397,7 @@
         </div>
       </div>
     </div>
+    <% end %>
   <% end %>
 
   <div class="text-xs text-secondary text-center">

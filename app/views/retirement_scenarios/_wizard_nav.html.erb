@@ -11,7 +11,7 @@
 
 <ul class="flex items-center gap-2">
   <% steps.each_with_index do |step, idx| %>
-    <li class="flex items-center gap-2 group" data-retirement-wizard-target="nav" data-step-key="<%= step[:key] %>">
+    <li class="flex items-center gap-2 group" data-retirement-wizard-nav data-step-key="<%= step[:key] %>">
       <% is_current = step[:key] == current_step
          is_complete = idx < current_index %>
 
@@ -28,7 +28,7 @@
 
       <button type="button"
               class="flex items-center gap-3 cursor-pointer"
-              data-action="click->retirement-wizard#goToStep"
+              onclick="document.dispatchEvent(new CustomEvent('retirement-wizard:go-to-step', { detail: { step: '<%= step[:key] %>', stepIndex: <%= idx %> } }))"
               data-step="<%= step[:key] %>"
               data-step-index="<%= idx %>">
         <div class="flex items-center gap-2 text-sm font-medium <%= text_class %>" data-step-container>

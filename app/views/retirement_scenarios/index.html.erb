@@ -1,105 +1,238 @@
-<div class="space-y-6">
-  <div class="flex items-center justify-between">
-    <h1 class="text-xl font-medium text-primary">Retirement Planning</h1>
-    <%= render DS::Link.new(
-      text: "Create Plan",
-      icon: "plus",
-      variant: "primary",
-      href: new_retirement_scenario_path
-    ) %>
-  </div>
-
-  <% if @primary_scenario %>
-    <!-- Primary Scenario Summary -->
-    <div class="bg-container rounded-xl p-6 shadow-border-xs">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold text-primary"><%= @primary_scenario.name %></h2>
-        <span class="px-2 py-1 text-xs font-medium bg-primary/10 text-primary rounded-full">Primary</span>
-      </div>
-
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div>
-          <div class="text-sm text-secondary">Current Portfolio</div>
-          <div class="text-xl font-bold text-primary"><%= format_money @primary_scenario.current_portfolio_value_money %></div>
-        </div>
-
-        <div>
-          <div class="text-sm text-secondary">Required Portfolio</div>
-          <div class="text-xl font-bold text-primary"><%= format_money @primary_scenario.required_portfolio_value_money %></div>
-        </div>
-
-        <div>
-          <div class="text-sm text-secondary">Progress</div>
-          <div class="text-xl font-bold text-primary"><%= number_to_percentage(@primary_scenario.progress_percent, precision: 0) %></div>
-        </div>
-
-        <div>
-          <div class="text-sm text-secondary">Retirement Date</div>
-          <div class="text-xl font-bold">
-            <% if @primary_scenario.can_retire_now? %>
-              <span class="text-green-600">Today!</span>
-            <% elsif @primary_scenario.projected_retirement_date %>
-              <span class="text-primary"><%= @primary_scenario.projected_retirement_date.year %></span>
-            <% else %>
-              <span class="text-secondary">TBD</span>
-            <% end %>
-          </div>
-        </div>
-      </div>
-
-      <div class="mt-4">
-        <%= render DS::Link.new(
-          text: "View Details",
-          icon: "arrow-right",
-          variant: "outline",
-          href: retirement_scenario_path(@primary_scenario)
-        ) %>
-      </div>
-    </div>
-  <% else %>
-    <!-- No Scenarios Yet -->
-    <div class="bg-container rounded-xl p-12 text-center shadow-border-xs">
-      <div class="text-secondary mb-4">
-        <%= icon "calendar-clock", class: "w-16 h-16 mx-auto" %>
-      </div>
-      <h2 class="text-xl font-semibold text-primary mb-2">Plan Your Retirement</h2>
-      <p class="text-secondary mb-6">
-        Calculate when you can retire based on your pension income, expected expenses, and portfolio.
-      </p>
+<div class="space-y-4 pb-20 flex flex-col">
+  <header class="flex justify-between items-center text-primary font-medium">
+    <h1 class="text-xl">Retirement Planning</h1>
+    <div class="flex items-center gap-2">
       <%= render DS::Link.new(
-        text: "Create Your First Plan",
+        text: "New Plan",
         icon: "plus",
         variant: "primary",
-        href: new_retirement_scenario_path
+        href: new_retirement_scenario_path,
+        class: "hidden md:inline-flex"
+      ) %>
+
+      <%= render DS::Link.new(
+        icon: "plus",
+        variant: "icon-inverse",
+        href: new_retirement_scenario_path,
+        class: "rounded-full md:hidden"
       ) %>
     </div>
-  <% end %>
+  </header>
 
-  <!-- All Scenarios List -->
-  <% if @scenarios.length > 1 %>
-    <div class="bg-container rounded-xl p-6 shadow-border-xs">
-      <h3 class="text-base font-semibold text-primary mb-4">All Scenarios</h3>
-      <div class="space-y-2">
-        <% @scenarios.each do |scenario| %>
-          <div class="flex items-center justify-between p-3 bg-surface-inset rounded-lg">
+  <% if @scenarios.any? %>
+    <div class="flex flex-col bg-container rounded-xl shadow-border-xs p-4">
+      <!-- Search/Filter Bar -->
+      <div class="flex items-center gap-3 mb-4">
+        <div class="flex-1 relative">
+          <%= icon "search", class: "absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-secondary" %>
+          <input type="text"
+                 placeholder="Search plans..."
+                 class="w-full pl-10 pr-4 py-2 text-sm bg-container-inset border-none rounded-lg focus:ring-2 focus:ring-primary/20"
+                 data-controller="filter"
+                 data-action="input->filter#search"
+                 data-filter-target="input">
+        </div>
+      </div>
+
+      <!-- Summary Stats -->
+      <% if @primary_scenario && @primary_scenario.current_portfolio_value.present? %>
+        <div class="bg-surface-inset rounded-lg p-4 mb-4">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-secondary uppercase">Primary Plan Summary</span>
+            <span class="px-2 py-0.5 text-xs font-medium bg-green-500/10 text-green-700 rounded-full">
+              <%= @primary_scenario.can_retire_now? ? "Ready!" : "#{number_to_percentage(@primary_scenario.progress_percent || 0, precision: 0)} Complete" %>
+            </span>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
-              <div class="font-medium text-primary"><%= scenario.name %></div>
-              <div class="text-sm text-secondary">
-                <% if scenario.can_retire_now? %>
-                  Ready to retire
-                <% elsif scenario.projected_retirement_date %>
-                  Retirement: <%= scenario.projected_retirement_date.strftime("%b %Y") %>
+              <div class="text-secondary">Portfolio</div>
+              <div class="font-semibold text-primary"><%= format_money @primary_scenario.current_portfolio_value_money %></div>
+            </div>
+            <div>
+              <div class="text-secondary">Required</div>
+              <div class="font-semibold text-primary"><%= format_money @primary_scenario.required_portfolio_value_money %></div>
+            </div>
+            <div>
+              <div class="text-secondary">Gap</div>
+              <div class="font-semibold <%= @primary_scenario.can_retire_now? ? 'text-green-600' : 'text-primary' %>">
+                <%= @primary_scenario.can_retire_now? ? "None" : format_money(@primary_scenario.portfolio_gap_money) %>
+              </div>
+            </div>
+            <div>
+              <div class="text-secondary">Retire</div>
+              <div class="font-semibold">
+                <% if @primary_scenario.can_retire_now? %>
+                  <span class="text-green-600">Today!</span>
+                <% elsif @primary_scenario.projected_retirement_date %>
+                  <span class="text-primary"><%= @primary_scenario.projected_retirement_date.strftime("%b %Y") %></span>
                 <% else %>
-                  Incomplete
+                  <span class="text-secondary">—</span>
                 <% end %>
               </div>
             </div>
-            <div class="flex gap-2">
-              <%= link_to "View", retirement_scenario_path(scenario), class: "btn btn--ghost btn--sm" %>
-              <%= button_to "Delete", retirement_scenario_path(scenario), method: :delete, data: { turbo_confirm: "Delete this scenario?" }, class: "btn btn--ghost btn--sm text-red-500" %>
+          </div>
+        </div>
+      <% end %>
+
+      <!-- Column Headers (desktop) -->
+      <div class="hidden md:grid grid-cols-12 bg-container-inset rounded-xl px-5 py-3 text-xs uppercase font-medium text-secondary items-center mb-4">
+        <div class="col-span-5">Plan Name</div>
+        <div class="col-span-2">Progress</div>
+        <div class="col-span-2">Retirement</div>
+        <div class="col-span-3 text-right">Actions</div>
+      </div>
+
+      <!-- Plans List -->
+      <div class="space-y-4">
+        <% @scenarios.group_by { |s| s.created_at.to_date }.sort.reverse.each do |date, scenarios| %>
+          <div class="bg-container-inset rounded-xl p-1">
+            <!-- Date Header -->
+            <div class="py-2 px-4 flex items-center justify-between font-medium text-xs text-secondary">
+              <p class="uppercase space-x-1.5">
+                <span><%= I18n.l(date, format: :long) %></span>
+                <span>·</span>
+                <span><%= scenarios.size %> <%= "plan".pluralize(scenarios.size) %></span>
+              </p>
+            </div>
+
+            <!-- Plans in this group -->
+            <div class="bg-container shadow-border-xs rounded-lg divide-y divide-secondary">
+              <% scenarios.each do |scenario| %>
+                <div class="p-4">
+                  <!-- Mobile Layout -->
+                  <div class="md:hidden">
+                    <div class="flex items-start justify-between mb-2">
+                      <div class="flex items-center gap-3">
+                        <% if scenario.can_retire_now? %>
+                          <%= render DS::FilledIcon.new(variant: :success, icon: "check", size: "sm") %>
+                        <% else %>
+                          <%= render DS::FilledIcon.new(variant: :text, text: scenario.name, size: "sm") %>
+                        <% end %>
+                        <div>
+                          <div class="font-medium text-primary flex items-center gap-2">
+                            <%= link_to scenario.name, retirement_scenario_path(scenario), class: "hover:underline" %>
+                            <% if scenario.is_primary %>
+                              <span class="px-1.5 py-0.5 text-xs bg-primary/10 text-primary rounded">Primary</span>
+                            <% end %>
+                          </div>
+                          <div class="text-xs text-secondary">
+                            <% if scenario.can_retire_now? %>
+                              Ready to retire!
+                            <% elsif scenario.projected_retirement_date %>
+                              Target: <%= scenario.projected_retirement_date.strftime("%b %Y") %>
+                            <% else %>
+                              Calculating...
+                            <% end %>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="flex items-center justify-between mt-3">
+                      <div class="text-sm">
+                        <span class="text-secondary">Progress:</span>
+                        <span class="font-semibold <%= scenario.can_retire_now? ? 'text-green-600' : 'text-primary' %>">
+                          <%= number_to_percentage(scenario.progress_percent || 0, precision: 0) %>
+                        </span>
+                      </div>
+                      <div class="flex gap-2">
+                        <%= link_to retirement_scenario_path(scenario), class: "p-2 hover:bg-container-inset rounded-lg" do %>
+                          <%= icon "eye", class: "w-4 h-4 text-secondary" %>
+                        <% end %>
+                        <%= link_to edit_retirement_scenario_path(scenario), class: "p-2 hover:bg-container-inset rounded-lg" do %>
+                          <%= icon "pencil", class: "w-4 h-4 text-secondary" %>
+                        <% end %>
+                        <%= button_to retirement_scenario_path(scenario), method: :delete, data: { turbo_confirm: "Delete this plan?" }, class: "p-2 hover:bg-container-inset rounded-lg" do %>
+                          <%= icon "trash-2", class: "w-4 h-4 text-red-500" %>
+                        <% end %>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Desktop Layout -->
+                  <div class="hidden md:grid grid-cols-12 items-center">
+                    <div class="col-span-5 flex items-center gap-3">
+                      <% if scenario.can_retire_now? %>
+                        <%= render DS::FilledIcon.new(variant: :success, icon: "check", size: "sm") %>
+                      <% else %>
+                        <%= render DS::FilledIcon.new(variant: :text, text: scenario.name, size: "sm") %>
+                      <% end %>
+                      <div>
+                        <div class="font-medium text-primary flex items-center gap-2">
+                          <%= link_to scenario.name, retirement_scenario_path(scenario), class: "hover:underline" %>
+                          <% if scenario.is_primary %>
+                            <span class="px-1.5 py-0.5 text-xs bg-primary/10 text-primary rounded">Primary</span>
+                          <% end %>
+                        </div>
+                        <div class="text-xs text-secondary">
+                          <% if scenario.retirement_monthly_expenses_money %>
+                            Monthly expenses: <%= format_money scenario.retirement_monthly_expenses_money %>
+                          <% end %>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="col-span-2">
+                      <div class="flex items-center gap-2">
+                        <div class="flex-1 bg-alpha-black-100 rounded-full h-2 max-w-16">
+                          <div class="bg-green-500 h-2 rounded-full" style="width: <%= [scenario.progress_percent || 0, 100].min %>%"></div>
+                        </div>
+                        <span class="text-sm font-medium <%= scenario.can_retire_now? ? 'text-green-600' : 'text-primary' %>">
+                          <%= number_to_percentage(scenario.progress_percent || 0, precision: 0) %>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div class="col-span-2">
+                      <% if scenario.can_retire_now? %>
+                        <span class="text-green-600 font-medium text-sm flex items-center gap-1">
+                          <%= icon "check", class: "w-4 h-4" %> Ready!
+                        </span>
+                      <% elsif scenario.projected_retirement_date %>
+                        <span class="text-sm text-primary"><%= scenario.projected_retirement_date.strftime("%b %Y") %></span>
+                        <% if scenario.years_until_retirement %>
+                          <div class="text-xs text-secondary"><%= scenario.years_until_retirement %> years</div>
+                        <% end %>
+                      <% else %>
+                        <span class="text-sm text-secondary">—</span>
+                      <% end %>
+                    </div>
+
+                    <div class="col-span-3 flex justify-end gap-1">
+                      <%= link_to retirement_scenario_path(scenario), class: "p-2 hover:bg-container-inset rounded-lg", title: "View" do %>
+                        <%= icon "eye", class: "w-4 h-4 text-secondary" %>
+                      <% end %>
+                      <%= link_to edit_retirement_scenario_path(scenario), class: "p-2 hover:bg-container-inset rounded-lg", title: "Edit" do %>
+                        <%= icon "pencil", class: "w-4 h-4 text-secondary" %>
+                      <% end %>
+                      <%= button_to retirement_scenario_path(scenario), method: :delete, data: { turbo_confirm: "Delete this plan?" }, class: "p-2 hover:bg-container-inset rounded-lg", title: "Delete" do %>
+                        <%= icon "trash-2", class: "w-4 h-4 text-red-500" %>
+                      <% end %>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
             </div>
           </div>
         <% end %>
+      </div>
+    </div>
+  <% else %>
+    <!-- Empty State -->
+    <div class="bg-container rounded-xl shadow-border-xs">
+      <div class="p-12 text-center">
+        <div class="text-secondary mb-4">
+          <%= icon "calendar-clock", class: "w-16 h-16 mx-auto" %>
+        </div>
+        <h2 class="text-xl font-semibold text-primary mb-2">Plan Your Retirement</h2>
+        <p class="text-secondary mb-6 max-w-md mx-auto">
+          Calculate when you can retire based on your pension income, expected expenses, and investment portfolio.
+        </p>
+        <%= render DS::Link.new(
+          text: "Create Your First Plan",
+          icon: "plus",
+          variant: "primary",
+          href: new_retirement_scenario_path
+        ) %>
       </div>
     </div>
   <% end %>
