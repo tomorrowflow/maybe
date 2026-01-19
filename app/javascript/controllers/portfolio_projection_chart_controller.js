@@ -1,0 +1,619 @@
+import { Controller } from "@hotwired/stimulus";
+import * as d3 from "d3";
+
+const parseLocalDate = d3.timeParse("%Y-%m-%d");
+
+export default class extends Controller {
+  static values = {
+    data: Object,
+  };
+
+  _d3SvgMemo = null;
+  _d3GroupMemo = null;
+  _d3Tooltip = null;
+  _d3InitialContainerWidth = 0;
+  _d3InitialContainerHeight = 0;
+  _resizeObserver = null;
+
+  // Color scheme
+  _colors = {
+    portfolio: "#3B82F6", // blue
+    portfolioFill: "#3B82F6",
+    required: "#22C55E", // green
+    retirement: "#10B981", // emerald
+    contributions: "#8B5CF6", // purple
+    returns: "#F97316", // orange
+  };
+
+  connect() {
+    this._install();
+    document.addEventListener("turbo:load", this._reinstall);
+    this._setupResizeObserver();
+  }
+
+  disconnect() {
+    this._teardown();
+    document.removeEventListener("turbo:load", this._reinstall);
+    this._resizeObserver?.disconnect();
+  }
+
+  _reinstall = () => {
+    this._teardown();
+    this._install();
+  };
+
+  _teardown() {
+    this._d3SvgMemo = null;
+    this._d3GroupMemo = null;
+    this._d3Tooltip = null;
+    this._d3Container.selectAll("*").remove();
+  }
+
+  _install() {
+    this._rememberInitialContainerSize();
+    this._draw();
+  }
+
+  _rememberInitialContainerSize() {
+    this._d3InitialContainerWidth = this._d3Container.node().clientWidth;
+    this._d3InitialContainerHeight = this._d3Container.node().clientHeight;
+  }
+
+  _draw() {
+    const metadata = this.dataValue.metadata;
+    if (!metadata || !metadata.has_data) {
+      this._drawEmpty();
+      return;
+    }
+
+    this._drawChart();
+  }
+
+  _drawEmpty() {
+    this._d3Svg
+      .append("text")
+      .attr("x", this._d3InitialContainerWidth / 2)
+      .attr("y", this._d3InitialContainerHeight / 2)
+      .attr("text-anchor", "middle")
+      .attr("class", "text-secondary")
+      .style("font-size", "14px")
+      .text("Not enough data to display projection");
+  }
+
+  _drawChart() {
+    this._drawGridLines();
+    this._drawPortfolioArea();
+    this._drawPortfolioLine();
+    this._drawRequiredLine();
+    this._drawRetirementMarker();
+    this._drawAxes();
+    this._drawLegend();
+    this._drawTooltip();
+    this._trackMouseForShowingTooltip();
+  }
+
+  _drawGridLines() {
+    // Horizontal grid lines
+    const yTicks = this._d3YScale.ticks(5);
+
+    this._d3Group
+      .selectAll(".grid-line-h")
+      .data(yTicks)
+      .join("line")
+      .attr("class", "grid-line-h")
+      .attr("x1", 0)
+      .attr("x2", this._d3ContainerWidth)
+      .attr("y1", (d) => this._d3YScale(d))
+      .attr("y2", (d) => this._d3YScale(d))
+      .attr("stroke", "var(--color-gray-200)")
+      .attr("stroke-dasharray", "2,2")
+      .attr("opacity", 0.5);
+  }
+
+  _drawPortfolioArea() {
+    const portfolioData = this.dataValue.series.portfolio;
+    if (!portfolioData || portfolioData.length === 0) return;
+
+    const lineData = portfolioData.map((d) => ({
+      date: parseLocalDate(d.date),
+      value: d.value,
+    }));
+
+    const area = d3
+      .area()
+      .x((d) => this._d3XScale(d.date))
+      .y0(this._d3ContainerHeight)
+      .y1((d) => this._d3YScale(d.value))
+      .curve(d3.curveMonotoneX);
+
+    // Gradient definition
+    const gradient = this._d3Svg
+      .append("defs")
+      .append("linearGradient")
+      .attr("id", `portfolio-gradient-${this.element.id}`)
+      .attr("x1", "0%")
+      .attr("y1", "0%")
+      .attr("x2", "0%")
+      .attr("y2", "100%");
+
+    gradient
+      .append("stop")
+      .attr("offset", "0%")
+      .attr("stop-color", this._colors.portfolioFill)
+      .attr("stop-opacity", 0.3);
+
+    gradient
+      .append("stop")
+      .attr("offset", "100%")
+      .attr("stop-color", this._colors.portfolioFill)
+      .attr("stop-opacity", 0.05);
+
+    this._d3Group
+      .append("path")
+      .datum(lineData)
+      .attr("class", "portfolio-area")
+      .attr("fill", `url(#portfolio-gradient-${this.element.id})`)
+      .attr("d", area);
+  }
+
+  _drawPortfolioLine() {
+    const portfolioData = this.dataValue.series.portfolio;
+    if (!portfolioData || portfolioData.length === 0) return;
+
+    const lineData = portfolioData.map((d) => ({
+      date: parseLocalDate(d.date),
+      value: d.value,
+    }));
+
+    const line = d3
+      .line()
+      .x((d) => this._d3XScale(d.date))
+      .y((d) => this._d3YScale(d.value))
+      .curve(d3.curveMonotoneX);
+
+    this._d3Group
+      .append("path")
+      .datum(lineData)
+      .attr("class", "portfolio-line")
+      .attr("fill", "none")
+      .attr("stroke", this._colors.portfolio)
+      .attr("stroke-width", 2.5)
+      .attr("d", line);
+  }
+
+  _drawRequiredLine() {
+    const required = this.dataValue.required_portfolio;
+    if (!required || required <= 0) return;
+
+    const y = this._d3YScale(required);
+
+    // Only draw if within visible range
+    if (y < 0 || y > this._d3ContainerHeight) return;
+
+    this._d3Group
+      .append("line")
+      .attr("class", "required-line")
+      .attr("x1", 0)
+      .attr("x2", this._d3ContainerWidth)
+      .attr("y1", y)
+      .attr("y2", y)
+      .attr("stroke", this._colors.required)
+      .attr("stroke-width", 2)
+      .attr("stroke-dasharray", "8,4");
+
+    // Label for required line
+    this._d3Group
+      .append("text")
+      .attr("x", this._d3ContainerWidth - 5)
+      .attr("y", y - 8)
+      .attr("text-anchor", "end")
+      .attr("fill", this._colors.required)
+      .style("font-size", "11px")
+      .style("font-weight", "600")
+      .text(`Goal: ${this._formatCurrency(required)}`);
+  }
+
+  _drawRetirementMarker() {
+    const milestones = this.dataValue.milestones;
+    if (!milestones) return;
+
+    const retirementMilestone = milestones.find(
+      (m) => m.type === "retirement_ready"
+    );
+    if (!retirementMilestone) return;
+
+    const date = parseLocalDate(retirementMilestone.date);
+    const x = this._d3XScale(date);
+    const y = this._d3YScale(retirementMilestone.value);
+
+    // Vertical line at retirement point
+    this._d3Group
+      .append("line")
+      .attr("class", "retirement-line")
+      .attr("x1", x)
+      .attr("x2", x)
+      .attr("y1", 0)
+      .attr("y2", this._d3ContainerHeight)
+      .attr("stroke", this._colors.retirement)
+      .attr("stroke-width", 1.5)
+      .attr("stroke-dasharray", "4,2")
+      .attr("opacity", 0.7);
+
+    // Circle at intersection
+    this._d3Group
+      .append("circle")
+      .attr("class", "retirement-dot")
+      .attr("cx", x)
+      .attr("cy", y)
+      .attr("r", 6)
+      .attr("fill", this._colors.retirement)
+      .attr("stroke", "#fff")
+      .attr("stroke-width", 2);
+
+    // Label
+    this._d3Group
+      .append("text")
+      .attr("x", x)
+      .attr("y", 20)
+      .attr("text-anchor", "middle")
+      .attr("fill", this._colors.retirement)
+      .style("font-size", "11px")
+      .style("font-weight", "600")
+      .text("Retirement Ready!");
+  }
+
+  _drawAxes() {
+    // X Axis
+    const xAxisGroup = this._d3Group
+      .append("g")
+      .attr("transform", `translate(0,${this._d3ContainerHeight})`)
+      .call(
+        d3
+          .axisBottom(this._d3XScale)
+          .ticks(6)
+          .tickFormat(d3.timeFormat("%Y"))
+      );
+
+    xAxisGroup.select(".domain").attr("stroke", "var(--color-gray-300)");
+    xAxisGroup
+      .selectAll(".tick line")
+      .attr("stroke", "var(--color-gray-300)");
+    xAxisGroup
+      .selectAll(".tick text")
+      .attr("fill", "var(--color-gray-500)")
+      .style("font-size", "11px");
+
+    // Y Axis
+    const yAxisGroup = this._d3Group.append("g").call(
+      d3
+        .axisLeft(this._d3YScale)
+        .ticks(5)
+        .tickFormat((d) => this._formatCurrency(d))
+    );
+
+    yAxisGroup.select(".domain").attr("stroke", "var(--color-gray-300)");
+    yAxisGroup
+      .selectAll(".tick line")
+      .attr("stroke", "var(--color-gray-300)");
+    yAxisGroup
+      .selectAll(".tick text")
+      .attr("fill", "var(--color-gray-500)")
+      .style("font-size", "11px");
+  }
+
+  _drawLegend() {
+    const legendData = [
+      { key: "portfolio", label: "Portfolio Value", color: this._colors.portfolio },
+      { key: "required", label: "Retirement Goal", color: this._colors.required, isDashed: true },
+    ];
+
+    const retirementMilestone = this.dataValue.milestones?.find(
+      (m) => m.type === "retirement_ready"
+    );
+    if (retirementMilestone) {
+      legendData.push({
+        key: "retirement",
+        label: "Retirement Ready",
+        color: this._colors.retirement,
+        isCircle: true,
+      });
+    }
+
+    const legend = this._d3Svg
+      .append("g")
+      .attr("class", "legend")
+      .attr(
+        "transform",
+        `translate(${this._margin.left}, ${this._d3InitialContainerHeight - 20})`
+      );
+
+    const legendItems = legend
+      .selectAll(".legend-item")
+      .data(legendData)
+      .join("g")
+      .attr("class", "legend-item")
+      .attr("transform", (d, i) => `translate(${i * 130}, 0)`);
+
+    legendItems.each(function (d) {
+      const item = d3.select(this);
+      if (d.isCircle) {
+        item
+          .append("circle")
+          .attr("cx", 6)
+          .attr("cy", 6)
+          .attr("r", 5)
+          .attr("fill", d.color);
+      } else if (d.isDashed) {
+        item
+          .append("line")
+          .attr("x1", 0)
+          .attr("x2", 12)
+          .attr("y1", 6)
+          .attr("y2", 6)
+          .attr("stroke", d.color)
+          .attr("stroke-width", 2)
+          .attr("stroke-dasharray", "4,2");
+      } else {
+        item
+          .append("rect")
+          .attr("width", 12)
+          .attr("height", 3)
+          .attr("y", 5)
+          .attr("rx", 1)
+          .attr("fill", d.color);
+      }
+    });
+
+    legendItems
+      .append("text")
+      .attr("x", 18)
+      .attr("y", 10)
+      .attr("fill", "var(--color-gray-600)")
+      .style("font-size", "10px")
+      .text((d) => d.label);
+  }
+
+  _drawTooltip() {
+    this._d3Tooltip = d3
+      .select(`#${this.element.id}`)
+      .append("div")
+      .attr(
+        "class",
+        "bg-container text-sm font-sans absolute p-3 border border-secondary rounded-lg pointer-events-none opacity-0 shadow-lg"
+      )
+      .style("z-index", "1000");
+  }
+
+  _trackMouseForShowingTooltip() {
+    const portfolioData = this.dataValue.series.portfolio;
+    const contributionsData = this.dataValue.series.contributions;
+    const returnsData = this.dataValue.series.returns;
+    const startingValue = this.dataValue.series.starting_value;
+    const bisectDate = d3.bisector((d) => parseLocalDate(d.date)).left;
+
+    this._d3Group
+      .append("rect")
+      .attr("class", "overlay")
+      .attr("width", this._d3ContainerWidth)
+      .attr("height", this._d3ContainerHeight)
+      .attr("fill", "none")
+      .attr("pointer-events", "all")
+      .on("mousemove", (event) => {
+        const [xPos] = d3.pointer(event);
+        const x0 = this._d3XScale.invert(xPos);
+        const i = bisectDate(
+          portfolioData,
+          x0.toISOString().split("T")[0],
+          1
+        );
+        const idx = Math.min(Math.max(i - 1, 0), portfolioData.length - 1);
+
+        const d = {
+          date: portfolioData[idx].date,
+          portfolio: portfolioData[idx]?.value || 0,
+          contributions: contributionsData[idx]?.value || 0,
+          returns: returnsData[idx]?.value || 0,
+          startingValue: startingValue,
+        };
+
+        // Draw guideline
+        this._d3Group.selectAll(".guideline").remove();
+        this._d3Group
+          .append("line")
+          .attr("class", "guideline")
+          .attr("x1", xPos)
+          .attr("x2", xPos)
+          .attr("y1", 0)
+          .attr("y2", this._d3ContainerHeight)
+          .attr("stroke", "var(--color-gray-400)")
+          .attr("stroke-dasharray", "4,4");
+
+        // Draw dot on line
+        this._d3Group.selectAll(".hover-dot").remove();
+        this._d3Group
+          .append("circle")
+          .attr("class", "hover-dot")
+          .attr("cx", xPos)
+          .attr("cy", this._d3YScale(d.portfolio))
+          .attr("r", 5)
+          .attr("fill", this._colors.portfolio)
+          .attr("stroke", "#fff")
+          .attr("stroke-width", 2);
+
+        // Position tooltip
+        const estimatedTooltipWidth = 220;
+        const pageWidth = document.body.clientWidth;
+        const tooltipX = event.pageX + 10;
+        const overflowX = tooltipX + estimatedTooltipWidth - pageWidth;
+        const adjustedX =
+          overflowX > 0 ? event.pageX - estimatedTooltipWidth - 10 : tooltipX;
+
+        this._d3Tooltip
+          .html(this._tooltipTemplate(d))
+          .style("opacity", 1)
+          .style("left", `${adjustedX}px`)
+          .style("top", `${event.pageY - 10}px`);
+      })
+      .on("mouseout", () => {
+        this._d3Group.selectAll(".guideline").remove();
+        this._d3Group.selectAll(".hover-dot").remove();
+        this._d3Tooltip.style("opacity", 0);
+      });
+  }
+
+  _tooltipTemplate(d) {
+    const formatDate = d3.timeFormat("%B %Y");
+    const date = parseLocalDate(d.date);
+    const symbol = this.dataValue.metadata?.currency_symbol || "$";
+    const required = this.dataValue.required_portfolio || 0;
+    const progress =
+      required > 0 ? ((d.portfolio / required) * 100).toFixed(1) : 100;
+    const isReady = d.portfolio >= required;
+
+    return `
+      <div style="margin-bottom: 8px; font-weight: 600; color: var(--color-gray-700);">
+        ${formatDate(date)}
+      </div>
+      <div style="display: grid; gap: 6px; font-size: 12px;">
+        <div style="display: flex; justify-content: space-between; gap: 16px;">
+          <span style="display: flex; align-items: center; gap: 6px;">
+            <span style="width: 8px; height: 3px; background: ${this._colors.portfolio}; border-radius: 1px;"></span>
+            Portfolio Value
+          </span>
+          <span style="font-weight: 600;">${symbol}${this._formatNumber(d.portfolio)}</span>
+        </div>
+        <div style="border-top: 1px solid var(--color-gray-200); padding-top: 6px; display: grid; gap: 4px;">
+          <div style="display: flex; justify-content: space-between; gap: 16px; color: var(--color-gray-500);">
+            <span>Starting Value</span>
+            <span>${symbol}${this._formatNumber(d.startingValue)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; gap: 16px;">
+            <span style="display: flex; align-items: center; gap: 6px;">
+              <span style="width: 8px; height: 8px; background: ${this._colors.contributions}; border-radius: 2px;"></span>
+              Contributions
+            </span>
+            <span style="color: ${this._colors.contributions};">+${symbol}${this._formatNumber(d.contributions)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; gap: 16px;">
+            <span style="display: flex; align-items: center; gap: 6px;">
+              <span style="width: 8px; height: 8px; background: ${this._colors.returns}; border-radius: 2px;"></span>
+              Investment Returns
+            </span>
+            <span style="color: ${this._colors.returns};">+${symbol}${this._formatNumber(d.returns)}</span>
+          </div>
+        </div>
+        <div style="border-top: 1px solid var(--color-gray-200); padding-top: 6px;">
+          <div style="display: flex; justify-content: space-between; gap: 16px;">
+            <span>Progress to Goal</span>
+            <span style="font-weight: 600; color: ${isReady ? "var(--color-green-600)" : "var(--color-gray-700)"};">
+              ${progress}%${isReady ? " ✓" : ""}
+            </span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  _formatCurrency(value) {
+    const symbol = this.dataValue.metadata?.currency_symbol || "$";
+    if (value >= 1000000) {
+      return `${symbol}${(value / 1000000).toFixed(1)}M`;
+    }
+    if (value >= 1000) {
+      return `${symbol}${(value / 1000).toFixed(0)}k`;
+    }
+    return `${symbol}${value.toFixed(0)}`;
+  }
+
+  _formatNumber(value) {
+    return new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  }
+
+  _createMainSvg() {
+    return this._d3Container
+      .append("svg")
+      .attr("width", this._d3InitialContainerWidth)
+      .attr("height", this._d3InitialContainerHeight)
+      .attr("viewBox", [
+        0,
+        0,
+        this._d3InitialContainerWidth,
+        this._d3InitialContainerHeight,
+      ]);
+  }
+
+  _createMainGroup() {
+    return this._d3Svg
+      .append("g")
+      .attr(
+        "transform",
+        `translate(${this._margin.left},${this._margin.top})`
+      );
+  }
+
+  get _d3Svg() {
+    if (!this._d3SvgMemo) {
+      this._d3SvgMemo = this._createMainSvg();
+    }
+    return this._d3SvgMemo;
+  }
+
+  get _d3Group() {
+    if (!this._d3GroupMemo) {
+      this._d3GroupMemo = this._createMainGroup();
+    }
+    return this._d3GroupMemo;
+  }
+
+  get _margin() {
+    return { top: 30, right: 20, bottom: 50, left: 70 };
+  }
+
+  get _d3ContainerWidth() {
+    return (
+      this._d3InitialContainerWidth - this._margin.left - this._margin.right
+    );
+  }
+
+  get _d3ContainerHeight() {
+    return (
+      this._d3InitialContainerHeight - this._margin.top - this._margin.bottom
+    );
+  }
+
+  get _d3Container() {
+    return d3.select(this.element);
+  }
+
+  get _d3XScale() {
+    const portfolioData = this.dataValue.series.portfolio;
+    const dates = portfolioData.map((d) => parseLocalDate(d.date));
+    return d3
+      .scaleTime()
+      .domain(d3.extent(dates))
+      .range([0, this._d3ContainerWidth]);
+  }
+
+  get _d3YScale() {
+    const portfolioData = this.dataValue.series.portfolio;
+    const required = this.dataValue.required_portfolio || 0;
+
+    const maxPortfolio = d3.max(portfolioData, (d) => d.value) || 0;
+    const maxValue = Math.max(maxPortfolio, required) * 1.15; // 15% padding
+
+    return d3
+      .scaleLinear()
+      .domain([0, maxValue])
+      .range([this._d3ContainerHeight, 0]);
+  }
+
+  _setupResizeObserver() {
+    this._resizeObserver = new ResizeObserver(() => {
+      this._reinstall();
+    });
+    this._resizeObserver.observe(this.element);
+  }
+}

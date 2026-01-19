@@ -58,10 +58,11 @@ class RetirementScenariosController < ApplicationController
     redirect_to retirement_scenarios_path, notice: "Scenario deleted"
   end
 
-  # Recalculate with current data
+  # Recalculate with current data and create snapshot
   def recalculate
     @scenario.recalculate!
-    redirect_to retirement_scenario_path(@scenario), notice: "Scenario recalculated with current data"
+    @scenario.create_snapshot_if_needed!(notes: "Manual snapshot")
+    redirect_to retirement_scenario_path(@scenario), notice: "Scenario recalculated and snapshot saved"
   end
 
   private

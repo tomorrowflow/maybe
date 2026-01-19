@@ -3,6 +3,7 @@ class RetirementScenario < ApplicationRecord
 
   belongs_to :family
   has_many :pension_sources, class_name: "RetirementScenarioPensionSource", dependent: :destroy
+  has_many :snapshots, class_name: "RetirementScenarioSnapshot", dependent: :destroy
 
   accepts_nested_attributes_for :pension_sources, allow_destroy: true, reject_if: :all_blank
 
@@ -551,7 +552,110 @@ class RetirementScenario < ApplicationRecord
     Money.new(income_at_full_pension, family.currency)
   end
 
+  # ========================================
+  # Historical Snapshot Methods
+  # ========================================
+
+  # Create a snapshot of current state
+  def create_snapshot!(notes: nil)
+    # Calculate projected portfolio value based on previous snapshot's projection
+    projected_value = calculate_projected_portfolio_for_today
+
+    snapshots.create!(
+      snapshot_date: Date.today,
+      current_portfolio_value: current_portfolio_value,
+      required_portfolio_value: required_portfolio_value,
+      portfolio_gap: portfolio_gap,
+      progress_percent: progress_percent,
+      projected_retirement_date: projected_retirement_date,
+      total_pension_income: total_pension_income,
+      income_gap_monthly: income_gap_monthly,
+      projected_portfolio_value: projected_value,
+      growth_rate_assumption: portfolio_growth_rate,
+      inflation_rate_assumption: inflation_rate,
+      monthly_contribution_assumption: monthly_contribution || median_monthly_surplus,
+      withdrawal_rate_assumption: portfolio_withdrawal_rate,
+      notes: notes
+    )
+  end
+
+  # Create snapshot if none exists for today
+  def create_snapshot_if_needed!(notes: nil)
+    return if snapshots.exists?(snapshot_date: Date.today)
+    create_snapshot!(notes: notes)
+  end
+
+  # Get the most recent snapshot
+  def latest_snapshot
+    snapshots.reverse_chronological.first
+  end
+
+  # Calculate what portfolio value was projected for today based on earlier snapshots
+  def calculate_projected_portfolio_for_today
+    previous = snapshots.where("snapshot_date < ?", Date.today).reverse_chronological.first
+    return nil unless previous
+
+    months_elapsed = months_since(previous.snapshot_date)
+    return previous.current_portfolio_value if months_elapsed <= 0
+
+    # Use the growth rate and contribution from the previous snapshot
+    growth_rate = previous.growth_rate_assumption || 7.0
+    contribution = previous.monthly_contribution_assumption || 0
+    monthly_rate = growth_rate / 100.0 / 12.0
+
+    # Compound growth calculation
+    portfolio = previous.current_portfolio_value
+    months_elapsed.times do
+      portfolio = portfolio * (1 + monthly_rate) + contribution
+    end
+
+    portfolio
+  end
+
+  # Calculate actual annualized growth rate between two dates
+  def actual_growth_rate(start_date: nil, end_date: Date.today)
+    start_snapshot = if start_date
+      snapshots.find_by(snapshot_date: start_date)
+    else
+      snapshots.chronological.first
+    end
+
+    end_snapshot = snapshots.find_by(snapshot_date: end_date) || latest_snapshot
+    return nil unless start_snapshot && end_snapshot
+    return nil if start_snapshot == end_snapshot
+
+    end_snapshot.actual_growth_rate_since(start_snapshot)
+  end
+
+  # Summary of assumption accuracy based on snapshots
+  def assumption_accuracy_summary
+    return nil if snapshots.count < 2
+
+    first_snapshot = snapshots.chronological.first
+    latest = latest_snapshot
+
+    actual_rate = actual_growth_rate
+    assumed_rate = first_snapshot.growth_rate_assumption
+
+    {
+      period_start: first_snapshot.snapshot_date,
+      period_end: latest.snapshot_date,
+      months: months_since(first_snapshot.snapshot_date),
+      assumed_growth_rate: assumed_rate,
+      actual_growth_rate: actual_rate,
+      growth_rate_variance: actual_rate && assumed_rate ? (actual_rate - assumed_rate).round(2) : nil,
+      tracking_status: latest.tracking_status,
+      portfolio_variance: latest.portfolio_variance,
+      portfolio_variance_percent: latest.portfolio_variance_percent
+    }
+  end
+
   private
+
+    def months_since(date)
+      today = Date.today
+      ((today.year - date.year) * 12) + (today.month - date.month)
+    end
 
     def months_between(start_date, end_date)
       return 0 if end_date < start_date

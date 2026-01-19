@@ -69,7 +69,7 @@ class RetirementScenario
       def build_metadata(years)
         {
           currency: scenario.family.currency,
-          currency_symbol: Money::Currency.find(scenario.family.currency)&.symbol || "$",
+          currency_symbol: Money::Currency.new(scenario.family.currency).symbol,
           start_date: (scenario.calculation_date || Date.today).to_s,
           end_date: ((scenario.calculation_date || Date.today) + years.years).to_s,
           years: years,

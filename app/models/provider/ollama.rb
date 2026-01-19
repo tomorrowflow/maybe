@@ -84,6 +84,7 @@ class Provider::Ollama < Provider
     def stream_chat_response(messages, tools, streamer)
       collected_chunks = []
       accumulated_text = ""
+      accumulated_tool_calls = []
 
       payload = {
         model: model,
@@ -98,15 +99,23 @@ class Provider::Ollama < Provider
 
       begin
         client.chat(payload, server_sent_events: true) do |event, _raw_response|
-          parsed_chunk = ChatStreamParser.new(event, model: model, accumulated_text: accumulated_text).parsed
+          parsed_chunk = ChatStreamParser.new(
+            event,
+            model: model,
+            accumulated_text: accumulated_text,
+            accumulated_tool_calls: accumulated_tool_calls
+          ).parsed
 
           unless parsed_chunk.nil?
             # Accumulate text chunks
             if parsed_chunk.type == "output_text"
               accumulated_text += parsed_chunk.data
+            # Accumulate tool_calls from intermediate chunks
+            elsif parsed_chunk.type == "tool_calls"
+              accumulated_tool_calls.concat(parsed_chunk.data)
             end
 
-            streamer.call(parsed_chunk)
+            streamer.call(parsed_chunk) unless parsed_chunk.type == "tool_calls"
             collected_chunks << parsed_chunk
           end
         end
