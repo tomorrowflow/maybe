@@ -120,3 +120,48 @@ betriebsrente_pension:
   accountable_type: Investment
   accountable: betriebsrente
   status: active
+
+bauspar_saving:
+  family: dylan_family
+  name: Schwäbisch Hall Bausparvertrag
+  balance: 15000
+  currency: EUR
+  accountable_type: BausparContract
+  accountable: one
+  status: active
+
+bauspar_allocated:
+  family: dylan_family
+  name: LBS Bausparvertrag (Allocated)
+  balance: 18000
+  currency: EUR
+  accountable_type: BausparContract
+  accountable: bauspar_allocated
+  status: active
+
+bauspar_loan:
+  family: dylan_family
+  name: Wüstenrot Bausparvertrag (Loan Phase)
+  balance: 25000
+  currency: EUR
+  accountable_type: BausparContract
+  accountable: bauspar_loan
+  status: active
+
+private_loan_friend:
+  family: dylan_family
+  name: Loan to Max
+  balance: 3500
+  currency: EUR
+  accountable_type: PrivateLoan
+  accountable: one
+  status: active
+
+private_loan_family:
+  family: dylan_family
+  name: Loan to Sister
+  balance: 8000
+  currency: EUR
+  accountable_type: PrivateLoan
+  accountable: family_loan
+  status: active

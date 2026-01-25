@@ -1,0 +1,50 @@
+<div class="space-y-4">
+  <div>
+    <h2 class="font-medium mb-1">MCC Codes Database</h2>
+    <p class="text-secondary text-sm mb-4">
+      Upload a CSV or JSON file containing Merchant Category Codes (MCC) to improve automatic transaction categorization.
+      The file should contain 'mcc' and 'description' or 'edited_description' columns.
+    </p>
+  </div>
+
+  <div class="flex items-center gap-4">
+    <div class="flex items-center gap-2">
+      <span class="text-sm text-secondary">Current codes loaded:</span>
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= @mcc_codes_count.to_i > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' %>">
+        <%= number_with_delimiter(@mcc_codes_count) %>
+      </span>
+    </div>
+  </div>
+
+  <%= form_with url: import_mcc_codes_settings_hosting_path, method: :post, local: true, multipart: true, class: "space-y-4" do |form| %>
+    <div class="flex items-end gap-4">
+      <div class="flex-1">
+        <label for="mcc_file" class="block text-sm font-medium text-primary mb-1">
+          MCC Codes File (CSV or JSON)
+        </label>
+        <input type="file"
+               name="mcc_file"
+               id="mcc_file"
+               accept=".csv,.json"
+               class="block w-full text-sm text-secondary
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded-md file:border-0
+                      file:text-sm file:font-medium
+                      file:bg-gray-100 file:text-primary
+                      hover:file:bg-gray-200
+                      cursor-pointer" />
+      </div>
+      <button type="submit" class="inline-flex items-center gap-1 font-medium whitespace-nowrap px-3 py-2 rounded-lg text-sm text-inverse bg-inverse hover:bg-inverse-hover">
+        <%= icon("upload", size: "sm", color: :white) %>
+        <span>Import MCC Codes</span>
+      </button>
+    </div>
+  <% end %>
+
+  <div class="text-xs text-secondary mt-2">
+    <p class="mb-1"><strong>Tip:</strong> You can download MCC codes from
+      <a href="https://github.com/greggles/mcc-codes" target="_blank" class="text-blue-600 hover:underline">github.com/greggles/mcc-codes</a>
+    </p>
+    <p>Supported formats: CSV with columns (mcc, edited_description) or JSON array with objects containing these fields.</p>
+  </div>
+</div>

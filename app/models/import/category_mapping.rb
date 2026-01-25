@@ -11,8 +11,12 @@ class Import::CategoryMapping < Import::Mapping
   def selectable_values
     family_categories = import.family.categories.alphabetically.map { |category| [ category.name, category.id ] }
 
-    unless key.blank?
+    # Add AI option for unassigned items (blank key means no category in CSV)
+    if key.blank?
+      family_categories.unshift [ "🤖 Auto-categorize with AI", AUTO_AI_KEY ]
+    else
       family_categories.unshift [ "Add as new category", CREATE_NEW_KEY ]
+      family_categories.unshift [ "🤖 Auto-categorize with AI", AUTO_AI_KEY ]
     end
 
     family_categories

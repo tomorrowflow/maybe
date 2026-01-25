@@ -1,11 +1,61 @@
+# Bausparvertrag in savings phase - early stage
 one:
   bausparsumme: 50000
   phase: saving
+  provider: "Schwäbisch Hall"
+  contract_number: "BSV-2020-12345"
+  tariff_name: "Fuchs Klassik"
+  savings_interest_rate: 0.25
+  loan_interest_rate: 2.35
+  contract_start_date: <%= 3.years.ago.to_date %>
+  expected_allocation_date: <%= 5.years.from_now.to_date %>
+  minimum_savings_percent: 40
+  minimum_savings_period_months: 84
+  minimum_bewertungszahl: 2500
+  current_bewertungszahl: 1200
+  monthly_contribution: 200
+  wohnungsbauspraemie_eligible: true
+  vermoegenswirksame_leistungen: true
 
+# Bausparvertrag ready for allocation
 bauspar_allocated:
   bausparsumme: 40000
   phase: allocated
+  provider: "LBS"
+  contract_number: "BSV-2018-54321"
+  tariff_name: "Trend"
+  savings_interest_rate: 0.10
+  loan_interest_rate: 1.95
+  contract_start_date: <%= 8.years.ago.to_date %>
+  actual_allocation_date: <%= 1.month.ago.to_date %>
+  minimum_savings_percent: 40
+  minimum_savings_period_months: 84
+  minimum_bewertungszahl: 2000
+  current_bewertungszahl: 2500
+  wohnungsbauspraemie_eligible: true
 
+# Bausparvertrag in loan phase
 bauspar_loan:
   bausparsumme: 60000
   phase: loan
+  provider: "Wüstenrot"
+  contract_number: "BSV-2015-98765"
+  tariff_name: "Wohnsparen"
+  savings_interest_rate: 0.50
+  loan_interest_rate: 2.75
+  contract_start_date: <%= 10.years.ago.to_date %>
+  actual_allocation_date: <%= 2.years.ago.to_date %>
+
+# Bausparvertrag that's close to allocation (for testing allocation_ready)
+bauspar_almost_ready:
+  bausparsumme: 30000
+  phase: saving
+  provider: "BHW"
+  contract_number: "BSV-2017-11111"
+  savings_interest_rate: 0.20
+  loan_interest_rate: 2.00
+  contract_start_date: <%= 8.years.ago.to_date %>
+  minimum_savings_percent: 40
+  minimum_savings_period_months: 84
+  minimum_bewertungszahl: 2000
+  current_bewertungszahl: 2100

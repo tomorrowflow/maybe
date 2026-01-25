@@ -67,6 +67,23 @@ class CategoriesController < ApplicationController
     redirect_back_or_to categories_path, notice: t(".success")
   end
 
+  def reprocess
+    uncategorized = Current.family.transactions.where(category_id: nil)
+
+    if uncategorized.none?
+      # Unlock all transactions to allow re-categorization
+      Current.family.transactions.update_all(locked_attributes: {})
+      uncategorized = Current.family.transactions
+    end
+
+    if uncategorized.any?
+      Current.family.auto_categorize_transactions_later(uncategorized)
+      redirect_back_or_to categories_path, notice: t(".success", count: uncategorized.count)
+    else
+      redirect_back_or_to categories_path, alert: t(".no_transactions")
+    end
+  end
+
   private
     def set_category
       @category = Current.family.categories.find(params[:id])

@@ -5,11 +5,13 @@
 
   <div class="space-y-2">
     <%= form.fields_for :accountable do |bauspar_form| %>
+      <h3 class="text-sm font-medium text-secondary mb-2">Contract Details</h3>
+
       <div class="flex items-center gap-2">
         <%= bauspar_form.number_field :bausparsumme,
                                      label: "Bausparsumme (Contract Amount)",
                                      placeholder: "50000",
-                                     helper_text: "Total contract amount",
+                                     helper_text: "Total contract amount (savings + loan)",
                                      required: true,
                                      min: 0,
                                      step: 0.01 %>
@@ -18,13 +20,19 @@
       <div class="flex items-center gap-2">
         <%= bauspar_form.text_field :provider,
                                    label: "Bausparkasse (Provider)",
-                                   placeholder: "e.g., Schwäbisch Hall, LBS" %>
+                                   placeholder: "e.g., Schwäbisch Hall, LBS, Wüstenrot" %>
       </div>
 
       <div class="flex items-center gap-2">
         <%= bauspar_form.text_field :contract_number,
                                    label: "Contract Number",
                                    placeholder: "Contract number" %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= bauspar_form.text_field :tariff_name,
+                                   label: "Tariff Name",
+                                   placeholder: "e.g., Fuchs, Klassik, Trend" %>
       </div>
 
       <div class="flex items-center gap-2">
@@ -35,6 +43,30 @@
                                 ["Closed", "closed"]],
                                { label: "Current Phase" } %>
       </div>
+
+      <%= render "shared/ruler", classes: "my-4" %>
+      <h3 class="text-sm font-medium text-secondary mb-2">Timeline</h3>
+
+      <div class="flex items-center gap-2">
+        <%= bauspar_form.date_field :contract_start_date,
+                                   label: "Contract Start Date",
+                                   helper_text: "When the contract was signed" %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= bauspar_form.date_field :expected_allocation_date,
+                                   label: "Expected Allocation Date",
+                                   helper_text: "Expected Zuteilungstermin" %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= bauspar_form.date_field :actual_allocation_date,
+                                   label: "Actual Allocation Date",
+                                   helper_text: "Leave blank if not yet allocated" %>
+      </div>
+
+      <%= render "shared/ruler", classes: "my-4" %>
+      <h3 class="text-sm font-medium text-secondary mb-2">Interest Rates</h3>
 
       <div class="flex items-center gap-2">
         <%= bauspar_form.number_field :savings_interest_rate,
@@ -52,6 +84,91 @@
                                      helper_text: "Interest rate during loan phase (%)",
                                      min: 0,
                                      step: 0.001 %>
+      </div>
+
+      <%= render "shared/ruler", classes: "my-4" %>
+      <h3 class="text-sm font-medium text-secondary mb-2">Allocation Requirements</h3>
+
+      <div class="flex items-center gap-2">
+        <%= bauspar_form.number_field :minimum_savings_percent,
+                                     label: "Minimum Savings Percentage",
+                                     placeholder: "40",
+                                     helper_text: "Percentage of Bausparsumme required (typically 40-50%)",
+                                     min: 0,
+                                     max: 100,
+                                     step: 0.1 %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= bauspar_form.number_field :minimum_savings_period_months,
+                                     label: "Minimum Savings Period (Months)",
+                                     placeholder: "84",
+                                     helper_text: "Mindestlaufzeit in months (typically 7 years = 84 months)",
+                                     min: 0 %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= bauspar_form.number_field :monthly_contribution,
+                                     label: "Monthly Contribution (Regelsparbeitrag)",
+                                     placeholder: "200",
+                                     helper_text: "Your regular monthly savings amount",
+                                     min: 0,
+                                     step: 0.01 %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= bauspar_form.number_field :minimum_bewertungszahl,
+                                     label: "Minimum Bewertungszahl",
+                                     placeholder: "2500",
+                                     helper_text: "Required evaluation number for allocation",
+                                     min: 0,
+                                     step: 0.01 %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= bauspar_form.number_field :current_bewertungszahl,
+                                     label: "Current Bewertungszahl",
+                                     placeholder: "1800",
+                                     helper_text: "Your current evaluation number",
+                                     min: 0,
+                                     step: 0.01 %>
+      </div>
+
+      <%= render "shared/ruler", classes: "my-4" %>
+      <h3 class="text-sm font-medium text-secondary mb-2">State Subsidies (Förderung)</h3>
+
+      <div class="space-y-3">
+        <label class="flex items-start gap-3 cursor-pointer">
+          <%= bauspar_form.check_box :wohnungsbauspraemie_eligible, class: "checkbox checkbox--light mt-0.5" %>
+          <div>
+            <span class="text-sm text-primary">Wohnungsbauprämie</span>
+            <p class="text-xs text-tertiary">Housing construction premium (up to €70/year single, €140 married)</p>
+          </div>
+        </label>
+
+        <label class="flex items-start gap-3 cursor-pointer">
+          <%= bauspar_form.check_box :arbeitnehmersparzulage_eligible, class: "checkbox checkbox--light mt-0.5" %>
+          <div>
+            <span class="text-sm text-primary">Arbeitnehmersparzulage</span>
+            <p class="text-xs text-tertiary">Employee savings allowance (9% on up to €470/year)</p>
+          </div>
+        </label>
+
+        <label class="flex items-start gap-3 cursor-pointer">
+          <%= bauspar_form.check_box :wohn_riester_eligible, class: "checkbox checkbox--light mt-0.5" %>
+          <div>
+            <span class="text-sm text-primary">Wohn-Riester</span>
+            <p class="text-xs text-tertiary">Riester subsidy for home financing</p>
+          </div>
+        </label>
+
+        <label class="flex items-start gap-3 cursor-pointer">
+          <%= bauspar_form.check_box :vermoegenswirksame_leistungen, class: "checkbox checkbox--light mt-0.5" %>
+          <div>
+            <span class="text-sm text-primary">Vermögenswirksame Leistungen (VL)</span>
+            <p class="text-xs text-tertiary">Employer capital-forming benefits</p>
+          </div>
+        </label>
       </div>
     <% end %>
   </div>

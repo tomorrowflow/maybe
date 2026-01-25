@@ -60,9 +60,9 @@ class Family::AutoMerchantDetector
   private
     attr_reader :family, :transaction_ids
 
-    # For now, OpenAI only, but this should work with any LLM concept provider
+    # Try OpenAI first, fall back to Ollama for self-hosted deployments
     def llm_provider
-      Provider::Registry.get_provider(:openai)
+      Provider::Registry.get_provider(:openai) || Provider::Registry.get_provider(:ollama)
     end
 
     def default_logo_provider_url

@@ -1,0 +1,6 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: "Edit Private Loan") %>
+  <% dialog.with_body do %>
+    <%= render "private_loans/form", account: @account, url: private_loan_path(@account) %>
+  <% end %>
+<% end %>

@@ -1,0 +1,54 @@
+# Private loan to a friend - annuity repayment
+one:
+  principal_amount: 5000
+  interest_rate: 3.5
+  rate_type: fixed
+  term_months: 24
+  repayment_type: annuity
+  start_date: <%= 6.months.ago.to_date %>
+  maturity_date: <%= 18.months.from_now.to_date %>
+  borrower_name: "Max Mustermann"
+  borrower_notes: "Loan for car repair"
+  has_written_contract: true
+  has_collateral: false
+
+# Family loan - bullet repayment (interest only, principal at end)
+family_loan:
+  principal_amount: 10000
+  interest_rate: 2.0
+  rate_type: fixed
+  term_months: 36
+  repayment_type: bullet
+  start_date: <%= 1.year.ago.to_date %>
+  maturity_date: <%= 2.years.from_now.to_date %>
+  borrower_name: "Sister"
+  borrower_notes: "Help with apartment deposit"
+  has_written_contract: false
+  has_collateral: false
+
+# Interest-free family loan
+interest_free:
+  principal_amount: 2000
+  interest_rate: 0
+  rate_type: fixed
+  term_months: 12
+  repayment_type: custom
+  start_date: <%= 3.months.ago.to_date %>
+  maturity_date: <%= 9.months.from_now.to_date %>
+  borrower_name: "Brother"
+  has_written_contract: false
+
+# Secured loan with collateral
+secured_loan:
+  principal_amount: 15000
+  interest_rate: 5.0
+  rate_type: fixed
+  term_months: 48
+  repayment_type: annuity
+  start_date: <%= 1.year.ago.to_date %>
+  maturity_date: <%= 3.years.from_now.to_date %>
+  borrower_name: "Business Partner"
+  contract_number: "PL-2025-001"
+  has_written_contract: true
+  has_collateral: true
+  collateral_description: "Company shares"

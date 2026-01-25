@@ -1,6 +1,8 @@
 class Family < ApplicationRecord
   include PlaidConnectable, Syncable, AutoTransferMatchable, Subscribeable
 
+  after_create :bootstrap_default_categories
+
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],
     [ "DD.MM.YYYY", "%d.%m.%Y" ],
@@ -28,6 +30,8 @@ class Family < ApplicationRecord
 
   has_many :tags, dependent: :destroy
   has_many :categories, dependent: :destroy
+  has_many :category_keywords, dependent: :destroy
+  has_many :tag_keywords, dependent: :destroy
   has_many :merchants, dependent: :destroy, class_name: "FamilyMerchant"
 
   has_many :budgets, dependent: :destroy
@@ -49,6 +53,14 @@ class Family < ApplicationRecord
 
   def auto_categorize_transactions(transaction_ids)
     AutoCategorizer.new(self, transaction_ids: transaction_ids).auto_categorize
+  end
+
+  def auto_tag_transactions_later(transactions)
+    AutoTagJob.perform_later(self, transaction_ids: transactions.pluck(:id))
+  end
+
+  def auto_tag_transactions(transaction_ids)
+    AutoTagger.new(self, transaction_ids: transaction_ids).auto_tag
   end
 
   def auto_detect_transaction_merchants_later(transactions)
@@ -119,4 +131,9 @@ class Family < ApplicationRecord
   def self_hoster?
     Rails.application.config.app_mode.self_hosted?
   end
+
+  private
+    def bootstrap_default_categories
+      categories.bootstrap!
+    end
 end

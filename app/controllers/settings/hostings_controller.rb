@@ -3,11 +3,12 @@ class Settings::HostingsController < ApplicationController
 
   guard_feature unless: -> { self_hosted? }
 
-  before_action :ensure_admin, only: :clear_cache
+  before_action :ensure_admin, only: [ :clear_cache, :import_mcc_codes ]
 
   def show
     synth_provider = Provider::Registry.get_provider(:synth)
     @synth_usage = synth_provider&.usage
+    @mcc_codes_count = MccCode.count
   end
 
   def update
@@ -32,6 +33,30 @@ class Settings::HostingsController < ApplicationController
   def clear_cache
     DataCacheClearJob.perform_later(Current.family)
     redirect_to settings_hosting_path, notice: t(".cache_cleared")
+  end
+
+  def import_mcc_codes
+    file = params[:mcc_file]
+
+    if file.blank?
+      redirect_to settings_hosting_path, alert: "Please select a file to upload."
+      return
+    end
+
+    result = case File.extname(file.original_filename).downcase
+    when ".csv"
+      MccCode.import_from_csv(file)
+    when ".json"
+      MccCode.import_from_json(file)
+    else
+      { imported: 0, errors: [ "Unsupported file format. Please upload a CSV or JSON file." ] }
+    end
+
+    if result[:errors].any?
+      redirect_to settings_hosting_path, alert: "Imported #{result[:imported]} MCC codes with #{result[:errors].size} errors."
+    else
+      redirect_to settings_hosting_path, notice: "Successfully imported #{result[:imported]} MCC codes."
+    end
   end
 
   private

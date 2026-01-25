@@ -1,5 +1,9 @@
 class TransactionImport < Import
   def import!
+    # Check upfront if any mappings have auto_ai enabled
+    has_category_auto_ai = mappings.categories.auto_ai.any?
+    has_tag_auto_ai = mappings.tags.auto_ai.any?
+
     transaction do
       mappings.each(&:create_mappable!)
 
@@ -10,8 +14,20 @@ class TransactionImport < Import
           mappings.accounts.mappable_for(row.account)
         end
 
-        category = mappings.categories.mappable_for(row.category)
-        tags = row.tags_list.map { |tag| mappings.tags.mappable_for(tag) }.compact
+        # Check if this specific category mapping uses AI
+        category_mapping = mappings.categories.find_by(key: row.category)
+        use_ai_for_category = category_mapping&.auto_ai?
+        category = use_ai_for_category ? nil : mappings.categories.mappable_for(row.category)
+
+        # Check if any tag mappings use AI
+        tags = row.tags_list.map do |tag|
+          tag_mapping = mappings.tags.find_by(key: tag)
+          if tag_mapping&.auto_ai?
+            nil
+          else
+            mappings.tags.mappable_for(tag)
+          end
+        end.compact
 
         Transaction.new(
           category: category,
@@ -29,6 +45,33 @@ class TransactionImport < Import
       end
 
       Transaction.import!(transactions, recursive: true)
+    end
+
+    # After import completes, queue AI jobs for uncategorized/untagged transactions
+    if has_category_auto_ai
+      uncategorized_transactions = family.transactions
+        .joins(:entry)
+        .where(entries: { import_id: id })
+        .where(category_id: nil)
+
+      if uncategorized_transactions.any?
+        Rails.logger.info("Queuing AI categorization for #{uncategorized_transactions.count} transactions from import #{id}")
+        family.auto_categorize_transactions_later(uncategorized_transactions)
+      end
+    end
+
+    if has_tag_auto_ai
+      # Find transactions from this import that have no tags
+      untagged_transactions = family.transactions
+        .joins(:entry)
+        .where(entries: { import_id: id })
+        .left_joins(:taggings)
+        .where(taggings: { id: nil })
+
+      if untagged_transactions.any?
+        Rails.logger.info("Queuing AI tagging for #{untagged_transactions.count} transactions from import #{id}")
+        family.auto_tag_transactions_later(untagged_transactions)
+      end
     end
   end
 

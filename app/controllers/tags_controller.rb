@@ -39,6 +39,25 @@ class TagsController < ApplicationController
     redirect_back_or_to tags_path, notice: "All tags deleted"
   end
 
+  def reprocess
+    # Find transactions without tags
+    untagged = Current.family.transactions
+      .left_joins(:taggings)
+      .where(taggings: { id: nil })
+
+    if untagged.none?
+      # If all transactions have tags, reprocess all of them
+      untagged = Current.family.transactions
+    end
+
+    if untagged.any?
+      Current.family.auto_tag_transactions_later(untagged)
+      redirect_back_or_to tags_path, notice: t(".reprocess_success", count: untagged.count)
+    else
+      redirect_back_or_to tags_path, alert: t(".no_transactions")
+    end
+  end
+
   private
 
     def set_tag

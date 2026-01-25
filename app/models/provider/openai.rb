@@ -26,6 +26,18 @@ class Provider::Openai < Provider
     end
   end
 
+  def auto_tag(transactions: [], user_tags: [])
+    with_provider_response do
+      raise Error, "Too many transactions to auto-tag. Max is 25 per request." if transactions.size > 25
+
+      AutoTagger.new(
+        client,
+        transactions: transactions,
+        user_tags: user_tags
+      ).auto_tag
+    end
+  end
+
   def auto_detect_merchants(transactions: [], user_merchants: [])
     with_provider_response do
       raise Error, "Too many transactions to auto-detect merchants. Max is 25 per request." if transactions.size > 25

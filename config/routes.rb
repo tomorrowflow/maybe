@@ -59,6 +59,7 @@ Rails.application.routes.draw do
     resource :preferences, only: :show
     resource :hosting, only: %i[show update] do
       delete :clear_cache, on: :collection
+      post :import_mcc_codes, on: :collection
     end
     resource :billing, only: :show
     resource :security, only: :show
@@ -75,6 +76,7 @@ Rails.application.routes.draw do
   resources :tags, except: :show do
     resources :deletions, only: %i[new create], module: :tag
     delete :destroy_all, on: :collection
+    post :reprocess, on: :collection
   end
 
   namespace :category do
@@ -85,6 +87,7 @@ Rails.application.routes.draw do
     resources :deletions, only: %i[new create], module: :category
 
     post :bootstrap, on: :collection
+    post :reprocess, on: :collection
     delete :destroy_all, on: :collection
   end
 
@@ -199,6 +202,7 @@ Rails.application.routes.draw do
   resources :loans, only: %i[new create edit update]
   resources :insurances, only: %i[new create edit update]
   resources :bauspar_contracts, only: %i[new create edit update]
+  resources :private_loans, only: %i[new create edit update]
   resources :cryptos, only: %i[new create edit update]
   resources :other_assets, only: %i[new create edit update]
   resources :other_liabilities, only: %i[new create edit update]

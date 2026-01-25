@@ -1,5 +1,6 @@
 class Import::Mapping < ApplicationRecord
   CREATE_NEW_KEY = "internal_new_resource"
+  AUTO_AI_KEY = "internal_auto_ai"
 
   belongs_to :import
   belongs_to :mappable, polymorphic: true, optional: true
@@ -8,6 +9,7 @@ class Import::Mapping < ApplicationRecord
 
   scope :for_import, ->(import) { where(import: import) }
   scope :creational, -> { where(create_when_empty: true, mappable: nil) }
+  scope :auto_ai, -> { where(auto_ai: true) }
   scope :categories, -> { where(type: "Import::CategoryMapping") }
   scope :tags, -> { where(type: "Import::TagMapping") }
   scope :accounts, -> { where(type: "Import::AccountMapping") }
@@ -37,6 +39,10 @@ class Import::Mapping < ApplicationRecord
 
   def creatable?
     mappable.nil? && key.present? && create_when_empty
+  end
+
+  def auto_ai?
+    auto_ai == true
   end
 
   def create_mappable!

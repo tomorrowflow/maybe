@@ -21,6 +21,11 @@ en:
       categories_incomes: Income categories
       empty: No categories found
       new: New category
+      reprocess: Auto-categorize
+      reprocess_tooltip: Use AI to automatically categorize uncategorized transactions
+    reprocess:
+      success: Queued %{count} transactions for AI categorization
+      no_transactions: No transactions to categorize
     menu:
       loading: Loading...
     new:

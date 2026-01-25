@@ -12,6 +12,15 @@
           confirm: CustomConfirm.for_resource_deletion("all tags", high_severity: true)) %>
   <% end %>
 
+    <%= render DS::Button.new(
+      text: t(".reprocess"),
+      variant: "outline",
+      icon: "sparkles",
+      href: reprocess_tags_path,
+      method: :post,
+      title: t(".reprocess_tooltip")
+    ) %>
+
     <%= render DS::Link.new(
       text: t(".new"),
       variant: "primary",

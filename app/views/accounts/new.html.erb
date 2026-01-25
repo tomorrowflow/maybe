@@ -6,6 +6,9 @@
       <%= render "account_type", accountable: Crypto.new %>
       <%= render "account_type", accountable: Property.new %>
       <%= render "account_type", accountable: Vehicle.new %>
+      <%= render "account_type", accountable: Insurance.new %>
+      <%= render "account_type", accountable: BausparContract.new %>
+      <%= render "account_type", accountable: PrivateLoan.new %>
     <% end %>
 
     <% unless params[:classification] == "asset" %>

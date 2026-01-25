@@ -12,8 +12,12 @@ class Import::TagMapping < Import::Mapping
   def selectable_values
     family_tags = import.family.tags.alphabetically.map { |tag| [ tag.name, tag.id ] }
 
-    unless key.blank?
+    # Add AI option for unassigned items (blank key means no tag in CSV)
+    if key.blank?
+      family_tags.unshift [ "🤖 Auto-tag with AI", AUTO_AI_KEY ]
+    else
       family_tags.unshift [ "Add as new tag", CREATE_NEW_KEY ]
+      family_tags.unshift [ "🤖 Auto-tag with AI", AUTO_AI_KEY ]
     end
 
     family_tags

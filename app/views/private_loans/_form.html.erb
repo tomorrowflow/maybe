@@ -1,0 +1,113 @@
+<%# locals: (account:, url:) %>
+
+<%= render "accounts/form", account: account, url: url do |form| %>
+  <%= render "shared/ruler", classes: "my-4" %>
+
+  <div class="space-y-2">
+    <%= form.fields_for :accountable do |loan_form| %>
+      <h3 class="text-sm font-medium text-secondary mb-2">Loan Details</h3>
+
+      <div class="flex items-center gap-2">
+        <%= loan_form.money_field :principal_amount,
+                                 label: "Principal Amount (Darlehenssumme)",
+                                 default_currency: Current.family.currency,
+                                 required: true %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= loan_form.text_field :borrower_name,
+                                label: "Borrower Name",
+                                placeholder: "Who did you lend money to?" %>
+      </div>
+
+      <%= render "shared/ruler", classes: "my-4" %>
+      <h3 class="text-sm font-medium text-secondary mb-2">Interest & Repayment</h3>
+
+      <div class="flex items-center gap-2">
+        <%= loan_form.number_field :interest_rate,
+                                  label: "Interest Rate (%)",
+                                  placeholder: "3.5",
+                                  helper_text: "Annual interest rate you receive",
+                                  min: 0,
+                                  step: 0.01 %>
+        <%= loan_form.select :rate_type,
+                            [["Fixed Rate", "fixed"], ["Variable Rate", "variable"]],
+                            { label: "Rate Type" } %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= loan_form.select :repayment_type,
+                            [
+                              ["Annuity (Equal Payments)", "annuity"],
+                              ["Bullet (Principal at End)", "bullet"],
+                              ["Interest Only", "interest_only"],
+                              ["Custom Schedule", "custom"]
+                            ],
+                            { label: "Repayment Type" } %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= loan_form.number_field :term_months,
+                                  label: "Term (Months)",
+                                  placeholder: "24",
+                                  helper_text: "Loan duration in months",
+                                  min: 1 %>
+      </div>
+
+      <%= render "shared/ruler", classes: "my-4" %>
+      <h3 class="text-sm font-medium text-secondary mb-2">Timeline</h3>
+
+      <div class="flex items-center gap-2">
+        <%= loan_form.date_field :start_date,
+                                label: "Loan Start Date",
+                                helper_text: "When the money was lent" %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= loan_form.date_field :maturity_date,
+                                label: "Maturity Date",
+                                helper_text: "When the loan should be fully repaid" %>
+      </div>
+
+      <%= render "shared/ruler", classes: "my-4" %>
+      <h3 class="text-sm font-medium text-secondary mb-2">Documentation</h3>
+
+      <div class="flex items-center gap-2">
+        <%= loan_form.text_field :contract_number,
+                                label: "Contract/Reference Number",
+                                placeholder: "Optional reference" %>
+      </div>
+
+      <div class="space-y-3">
+        <label class="flex items-start gap-3 cursor-pointer">
+          <%= loan_form.check_box :has_written_contract, class: "checkbox checkbox--light mt-0.5" %>
+          <div>
+            <span class="text-sm text-primary">Written Contract</span>
+            <p class="text-xs text-tertiary">A formal written agreement exists</p>
+          </div>
+        </label>
+
+        <label class="flex items-start gap-3 cursor-pointer">
+          <%= loan_form.check_box :has_collateral, class: "checkbox checkbox--light mt-0.5" %>
+          <div>
+            <span class="text-sm text-primary">Secured with Collateral</span>
+            <p class="text-xs text-tertiary">The loan is backed by collateral</p>
+          </div>
+        </label>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= loan_form.text_field :collateral_description,
+                                label: "Collateral Description",
+                                placeholder: "e.g., Car title, property lien" %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= loan_form.text_area :borrower_notes,
+                               label: "Notes",
+                               placeholder: "Any additional notes about this loan...",
+                               rows: 3 %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

@@ -14,6 +14,11 @@ en:
       empty: No tags yet
       new: New tag
       tags: Tags
+      reprocess: Auto-tag
+      reprocess_tooltip: Use AI to automatically tag untagged transactions
+    reprocess:
+      reprocess_success: Queued %{count} transactions for AI tagging
+      no_transactions: No transactions to tag
     new:
       new: New tag
     tag:

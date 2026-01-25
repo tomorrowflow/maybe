@@ -51,11 +51,22 @@ class Category < ApplicationRecord
     end
 
     def bootstrap!
-      default_categories.each do |name, color, icon, classification|
-        find_or_create_by!(name: name) do |category|
-          category.color = color
-          category.classification = classification
-          category.lucide_icon = icon
+      default_categories.each do |cat_data|
+        # Create or find the parent category
+        parent = find_or_create_by!(name: cat_data[:name]) do |category|
+          category.color = cat_data[:color]
+          category.classification = cat_data[:classification]
+          category.lucide_icon = cat_data[:icon]
+        end
+
+        # Create subcategories
+        cat_data[:subcategories]&.each do |sub_name|
+          find_or_create_by!(name: sub_name) do |sub|
+            sub.parent = parent
+            sub.color = parent.color
+            sub.lucide_icon = parent.lucide_icon
+            sub.classification = parent.classification
+          end
         end
       end
     end
@@ -71,20 +82,102 @@ class Category < ApplicationRecord
     private
       def default_categories
         [
-          [ "Income", "#e99537", "circle-dollar-sign", "income" ],
-          [ "Loan Payments", "#6471eb", "credit-card", "expense" ],
-          [ "Fees", "#6471eb", "credit-card", "expense" ],
-          [ "Entertainment", "#df4e92", "drama", "expense" ],
-          [ "Food & Drink", "#eb5429", "utensils", "expense" ],
-          [ "Shopping", "#e99537", "shopping-cart", "expense" ],
-          [ "Home Improvement", "#6471eb", "house", "expense" ],
-          [ "Healthcare", "#4da568", "pill", "expense" ],
-          [ "Personal Care", "#4da568", "pill", "expense" ],
-          [ "Services", "#4da568", "briefcase", "expense" ],
-          [ "Gifts & Donations", "#61c9ea", "hand-helping", "expense" ],
-          [ "Transportation", "#df4e92", "bus", "expense" ],
-          [ "Travel", "#df4e92", "plane", "expense" ],
-          [ "Rent & Utilities", "#db5a54", "lightbulb", "expense" ]
+          {
+            name: "Finances & Insurances",
+            color: "#6471eb",
+            icon: "credit-card",
+            classification: "expense",
+            subcategories: [
+              "Insurances",
+              "Interest & Investments",
+              "Real Estate",
+              "Transfer",
+              "ATM",
+              "Bank Charges",
+              "Job & Business",
+              "Savings",
+              "Services",
+              "Child Allowance & Alimony",
+              "Credits & Financing"
+            ]
+          },
+          {
+            name: "Leisure & Entertainment",
+            color: "#df4e92",
+            icon: "drama",
+            classification: "expense",
+            subcategories: [
+              "Trips & Activities",
+              "Media",
+              "Lottery",
+              "Vacation",
+              "Arts & Culture",
+              "Associations",
+              "Sports",
+              "Streaming",
+              "Hobby"
+            ]
+          },
+          {
+            name: "Living",
+            color: "#4da568",
+            icon: "house",
+            classification: "expense",
+            subcategories: [
+              "Shopping",
+              "Groceries",
+              "Rent & Utilities",
+              "Home Improvement",
+              "Furniture",
+              "Healthcare",
+              "Personal Care",
+              "Food & Drink",
+              "Clothing"
+            ]
+          },
+          {
+            name: "Mobility",
+            color: "#61c9ea",
+            icon: "bus",
+            classification: "expense",
+            subcategories: [
+              "Gas & Charging Station",
+              "Car & Motorcycle",
+              "Transport",
+              "Bicycle & Scooter",
+              "Parking",
+              "Car Insurance",
+              "Car Maintenance"
+            ]
+          },
+          {
+            name: "State & Authority",
+            color: "#805dee",
+            icon: "building",
+            classification: "expense",
+            subcategories: [
+              "Social Benefits",
+              "Taxes",
+              "Office & Administration Costs",
+              "Broadcasting Fee",
+              "Fees & Fines"
+            ]
+          },
+          {
+            name: "Income",
+            color: "#e99537",
+            icon: "circle-dollar-sign",
+            classification: "income",
+            subcategories: [
+              "Salary",
+              "Bonus",
+              "Investment Income",
+              "Rental Income",
+              "Side Income",
+              "Refunds",
+              "Gifts Received"
+            ]
+          }
         ]
       end
   end

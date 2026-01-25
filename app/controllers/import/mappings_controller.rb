@@ -6,6 +6,7 @@ class Import::MappingsController < ApplicationController
 
     mapping.update! \
       create_when_empty: create_when_empty,
+      auto_ai: auto_ai_selected?,
       mappable: mappable,
       value: mapping_params[:value]
 
@@ -29,8 +30,15 @@ class Import::MappingsController < ApplicationController
 
     def create_when_empty
       return false unless mapping_class.present?
+      return false if auto_ai_selected?
 
       mapping_params[:mappable_id] == mapping_class::CREATE_NEW_KEY
+    end
+
+    def auto_ai_selected?
+      return false unless mapping_class.present?
+
+      mapping_params[:mappable_id] == mapping_class::AUTO_AI_KEY
     end
 
     def mappable_class

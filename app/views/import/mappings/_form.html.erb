@@ -10,9 +10,16 @@
 
   <% if mapping.mappable_class.present? %>
     <%= form.hidden_field :mappable_type, value: mapping.mappable_class, id: dom_id(mapping, :mappable_type) %>
+    <% selected_value = if mapping.auto_ai?
+                          mapping.class::AUTO_AI_KEY
+                        elsif mapping.create_when_empty?
+                          mapping.class::CREATE_NEW_KEY
+                        else
+                          mapping.mappable_id
+                        end %>
     <%= form.select :mappable_id,
                       mapping.selectable_values,
-                      { container_class: mapping.invalid? ? "border-red-500" : nil, include_blank: mapping.requires_selection? ? "Select an option" : "Leave unassigned", selected: mapping.create_when_empty? ? mapping.class::CREATE_NEW_KEY : mapping.mappable_id },
+                      { container_class: mapping.invalid? ? "border-red-500" : nil, include_blank: mapping.requires_selection? ? "Select an option" : "Leave unassigned", selected: selected_value },
                       "data-auto-submit-form-target": "auto", "data-autosubmit-trigger-event": "change", disabled: mapping.import.complete?, id: dom_id(mapping, :mappable_id) %>
   <% else %>
     <%= form.select :value, mapping.selectable_values,

@@ -7,6 +7,12 @@ module Provider::LlmConcept
     raise NotImplementedError, "Subclasses must implement #auto_categorize"
   end
 
+  AutoTagging = Data.define(:transaction_id, :tag_names)
+
+  def auto_tag(transactions)
+    raise NotImplementedError, "Subclasses must implement #auto_tag"
+  end
+
   AutoDetectedMerchant = Data.define(:transaction_id, :business_name, :business_url)
 
   def auto_detect_merchants(transactions)

@@ -1,10 +1,6 @@
-<%# locals: (account:) %>
-
-<%= turbo_frame_tag dom_id(account, :modal) do %>
-  <%= modal do |m| %>
-    <% m.title { "New building savings contract (Bausparvertrag)" } %>
-    <% m.body do %>
-      <%= render "form", account: account, url: bauspar_contracts_path %>
-    <% end %>
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: "New Building Savings") %>
+  <% dialog.with_body do %>
+    <%= render "bauspar_contracts/form", account: @account, url: bauspar_contracts_path %>
   <% end %>
 <% end %>
