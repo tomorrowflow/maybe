@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Tech Stack
+
+- **Backend**: Ruby on Rails, PostgreSQL, Sidekiq + Redis, Propshaft (asset pipeline)
+- **Frontend**: Hotwire (Turbo + Stimulus), TailwindCSS v4.x, Lucide Icons, D3.js (charts)
+- **AI**: OpenAI (chat)
+- **External Services**: Stripe (payments), Plaid (bank data syncing), Synth (market data)
+- **Testing**: Minitest + fixtures, Mocha (stubs/mocks), VCR (external APIs)
+
 ## Common Development Commands
 
 ### Development Server
@@ -21,6 +29,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run lint` - Check JavaScript/TypeScript code
 - `npm run lint:fix` - Fix JavaScript/TypeScript issues
 - `npm run format` - Format JavaScript/TypeScript code
+- `bundle exec erb_lint ./app/**/*.erb -a` - ERB linting with auto-correct
 - `bin/brakeman` - Run security analysis
 
 ### Database
@@ -223,6 +232,8 @@ Sidekiq handles asynchronous tasks:
 - Prefer components over partials when available
 - Keep domain logic OUT of view templates
 - Logic belongs in component files, not template files
+- **Naming**: Components use `ComponentName` suffix (e.g., `ButtonComponent`, `DialogComponent`)
+- **Partials**: Underscore prefix (e.g., `_form.html.erb`), shared ones go in `app/views/shared/`
 
 ### Stimulus Controller Guidelines
 
