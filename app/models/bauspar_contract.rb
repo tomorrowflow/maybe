@@ -1,6 +1,8 @@
 class BausparContract < ApplicationRecord
   include Accountable
 
+  belongs_to :replaces_loan_account, class_name: "Account", optional: true
+
   PHASES = %w[saving allocated loan closed].freeze
 
   validates :bausparsumme, presence: true, numericality: { greater_than: 0 }
@@ -59,6 +61,41 @@ class BausparContract < ApplicationRecord
     end
   end
 
+  # Does this Bauspar replace a loan at allocation?
+  def replaces_loan?
+    replaces_loan_account.present?
+  end
+
+  # The loan amount when the Bauspar enters loan phase
+  # = Bausparsumme minus saved amount (what you still need to borrow)
+  # Returns a plain numeric value
+  def available_loan_amount
+    return 0 unless bausparsumme
+    bs = bausparsumme.is_a?(Money) ? bausparsumme.amount.to_f : bausparsumme.to_f
+    savings = account&.balance.to_f
+    [ bs - savings, 0 ].max
+  end
+
+  # Monthly payment during the Bauspar loan phase (annuity at the guaranteed loan rate)
+  # Returns a plain numeric value
+  def bauspar_loan_monthly_payment
+    return nil unless loan_interest_rate.present? && loan_interest_rate.to_f > 0 && bausparsumme.present?
+
+    loan_amount = available_loan_amount
+    return 0 if loan_amount <= 0
+
+    # Standard Bauspar loan term: typically ~10 years
+    estimated_term = 120
+
+    rate = loan_interest_rate.to_f
+    monthly_rate = rate / 100.0 / 12.0
+    if monthly_rate.zero?
+      loan_amount / estimated_term
+    else
+      (loan_amount * monthly_rate * (1 + monthly_rate)**estimated_term) / ((1 + monthly_rate)**estimated_term - 1)
+    end
+  end
+
   # Calculate savings progress toward the minimum savings threshold
   def savings_progress_percent
     return 0 unless bausparsumme && bausparsumme > 0
@@ -79,11 +116,9 @@ class BausparContract < ApplicationRecord
     Money.new(bausparsumme * (savings_target_percent / 100.0), account.currency)
   end
 
-  # Available loan amount after savings phase
-  def available_loan_amount
-    return nil unless bausparsumme
-    current_balance = account.balance_money.amount
-    Money.new([ bausparsumme - current_balance, 0 ].max, account.currency)
+  # Available loan amount as Money (for display in views)
+  def available_loan_amount_money
+    Money.new(available_loan_amount, account.currency)
   end
 
   # Check if minimum savings period has been met

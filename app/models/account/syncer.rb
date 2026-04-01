@@ -8,6 +8,13 @@ class Account::Syncer
   def perform_sync(sync)
     Rails.logger.info("Processing balances (#{account.linked? ? 'reverse' : 'forward'})")
     import_market_data
+
+    # For properties with HPI projection, generate quarterly valuations first
+    if uses_hpi_projection?
+      generate_hpi_valuations
+    end
+
+    # Run normal balance materialization (which will use the HPI valuations for properties)
     materialize_balances
   end
 
@@ -16,6 +23,15 @@ class Account::Syncer
   end
 
   private
+    def uses_hpi_projection?
+      account.property? && account.accountable.uses_hpi_projection?
+    end
+
+    def generate_hpi_valuations
+      Rails.logger.info("Generating HPI valuations for property")
+      account.accountable.generate_hpi_valuations
+    end
+
     def materialize_balances
       strategy = account.linked? ? :reverse : :forward
       Balance::Materializer.new(account, strategy: strategy).materialize_balances

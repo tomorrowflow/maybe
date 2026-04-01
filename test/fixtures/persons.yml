@@ -1,0 +1,26 @@
+bob_person:
+  family: dylan_family
+  first_name: Bob
+  last_name: Dylan
+  primary: true
+  country: US
+  date_of_birth: 1965-05-24
+  retirement_age: 67
+  gender: male
+
+sara_person:
+  family: dylan_family
+  first_name: Sara
+  last_name: Dylan
+  primary: false
+  country: US
+  date_of_birth: 1968-03-15
+  retirement_age: 67
+  gender: female
+
+empty_person:
+  family: empty
+  first_name: User
+  last_name: One
+  primary: true
+  country: US

@@ -9,7 +9,7 @@ en:
       price: Price per share
       qty: Quantity
       submit: Add transaction
-      ticker_placeholder: AAPL
+      ticker_placeholder: SAP
       type: Type
     header:
       buy: Buy

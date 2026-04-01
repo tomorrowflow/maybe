@@ -10,6 +10,11 @@
   <div class="space-y-2">
     <%= form.fields_for :accountable do |property_form| %>
       <div class="flex items-center gap-2">
+        <%= property_form.date_field :purchase_date,
+                                     label: "Purchase Date" %>
+      </div>
+
+      <div class="flex items-center gap-2">
         <%= property_form.number_field :year_built,
                                        label: t("properties.form.year_built"),
                                        placeholder: t("properties.form.year_built_placeholder"),

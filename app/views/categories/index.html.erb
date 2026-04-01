@@ -31,6 +31,8 @@
   </div>
 </header>
 
+<%= render "shared/ai_progress", job_type: "auto_categorize", progress: @auto_categorize_progress %>
+
 <div class="bg-container rounded-xl shadow-border-xs p-4">
   <% if @categories.any? %>
     <div class="space-y-4">

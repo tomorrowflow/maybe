@@ -12,6 +12,12 @@
   </div>
 <% end %>
 
+<%= settings_section title: "Property Data" do %>
+  <div class="space-y-6">
+    <%= render "settings/hostings/eurostat_settings" %>
+  </div>
+<% end %>
+
 <%= settings_section title: t(".invites") do %>
   <%= render "settings/hostings/invite_code_settings" %>
 <% end %>

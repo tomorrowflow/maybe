@@ -1,8 +1,8 @@
 class CreateRetirementScenarioPensionSources < ActiveRecord::Migration[7.2]
   def change
     create_table :retirement_scenario_pension_sources, id: :uuid do |t|
-      t.references :retirement_scenario, null: false, foreign_key: true, type: :uuid
-      t.references :account, null: false, foreign_key: true, type: :uuid
+      t.references :retirement_scenario, null: false, foreign_key: { on_delete: :cascade }, type: :uuid
+      t.references :account, null: false, foreign_key: { on_delete: :cascade }, type: :uuid
       t.decimal :expected_monthly_payout, precision: 19, scale: 4
       t.date :payout_start_date
 

@@ -1,0 +1,180 @@
+---
+en:
+  retirement_scenarios:
+    create:
+      success: Retirement scenario created
+    update:
+      success: Scenario updated
+    destroy:
+      success: Scenario deleted
+    recalculate:
+      success: Scenario recalculated and snapshot saved
+    index:
+      title: Retirement Planning
+      new_plan: New Plan
+      search_placeholder: Search plans...
+      primary_plan_summary: Primary Plan Summary
+      ready: Ready!
+      complete: Complete
+      portfolio: Portfolio
+      required: Required
+      gap: Gap
+      none: None
+      retire: Retire
+      today: Today!
+      plan_name: Plan Name
+      progress: Progress
+      retirement: Retirement
+      actions: Actions
+      plan:
+        one: plan
+        other: plans
+      primary: Primary
+      ready_to_retire: Ready to retire!
+      target: "Target:"
+      calculating: Calculating...
+      monthly_expenses: "Monthly expenses:"
+      years: years
+      view: View
+      edit: Edit
+      delete: Delete
+      delete_confirm: Delete this plan?
+      empty:
+        title: Plan Your Retirement
+        description: Calculate when you can retire based on your pension income, expected expenses, and investment portfolio.
+        cta: Create Your First Plan
+    new:
+      basics:
+        title: Let's plan your retirement
+        subtitle: Start by setting your basic retirement goals and target expenses.
+      income:
+        title: Your retirement income
+        subtitle: Enter your expected pension and income sources.
+      portfolio:
+        title: Portfolio strategy
+        subtitle: Set your withdrawal rate and growth assumptions.
+      submit: Create Plan
+    edit:
+      basics:
+        title: Basic retirement goals
+        subtitle: Update your plan name and target expenses.
+      income:
+        title: Your retirement income
+        subtitle: Update your expected pension and income sources.
+      portfolio:
+        title: Portfolio strategy
+        subtitle: Update your withdrawal rate and growth assumptions.
+      submit: Save Changes
+    form:
+      plan_name: Plan Name
+      plan_name_placeholder: My Retirement Plan
+      monthly_expenses: Monthly Expenses in Retirement
+      monthly_expenses_info_title: What should I include?
+      monthly_expenses_info_text: Include all expected monthly costs housing, food, healthcare, travel, hobbies, and any regular expenses you expect in retirement.
+      continue: Continue
+      last_day_of_salary: Last Day of Salary
+      current_annual_salary: Current Annual Salary
+      state_pension: State Pension (Gesetzliche Rente)
+      start_date: Start Date
+      monthly_amount: Monthly Amount
+      private_pension_plans: Private Pension Plans
+      current_value: Current Value
+      expected_monthly_payout: Expected Monthly Payout
+      from_account: "From account:"
+      payout_start_date: Payout Start Date
+      pension_prefill_note: Values are pre-filled from your pension account settings. You can override them here for this scenario.
+      no_pension_accounts: No pension accounts found.
+      add_pension_accounts_hint: Add Riester, Rürup, or Betriebsrente accounts to your portfolio to include them here.
+      other_pension_sources: Other Pension Sources
+      safe_withdrawal_rate: Safe Withdrawal Rate (%)
+      withdrawal_rate_info_title: What's a safe withdrawal rate?
+      withdrawal_rate_info_text: The percentage you can withdraw annually without depleting your portfolio. Conservative 3-3.5%, Moderate 4%, Aggressive 5%
+      growth_assumptions: Growth Assumptions
+      expected_annual_return: Expected Annual Return (%)
+      expected_inflation: Expected Inflation (%)
+      monthly_contribution: Monthly Contribution
+      monthly_contribution_placeholder: Leave blank to auto-calculate
+      monthly_contribution_hint: If blank, we'll calculate from your savings history.
+      compound_growth_title: Compound Growth
+      compound_growth_text: Your portfolio's growth accelerates over time thanks to compound returns on both your contributions and investment gains.
+    wizard_nav:
+      basics: Basics
+      income: Income
+      portfolio: Portfolio
+    show:
+      recalculate: Recalculate
+      edit: Edit
+      retirement_readiness: Retirement Readiness
+      current_portfolio: Current Portfolio
+      required_portfolio: Required Portfolio
+      portfolio: Portfolio
+      gap: Gap
+      ready: Ready!
+      progress: Progress
+      can_retire_today: You can retire today!
+      projected_retirement_date: Projected Retirement Date
+      years_from_now: years from now
+      unable_to_project: Unable to project retirement date with current savings rate
+      income_breakdown: Income Breakdown
+      monthly_expenses_in_retirement: "Monthly Expenses in Retirement:"
+      pension_income_sources: "Pension Income Sources:"
+      gesetzliche_rente: "Gesetzliche Rente:"
+      other_pension: "Other Pension:"
+      total_pensions: "Total Pensions:"
+      portfolio_must_cover: "Portfolio Must Cover:"
+      pensions_fully_cover: Pensions fully cover your expenses!
+      using_withdrawal_rate: "Using %{rate} withdrawal rate:"
+      required_portfolio_for_gap: "Required Portfolio for Gap:"
+      your_current_portfolio: "Your Current Portfolio:"
+      income_stream_planning: Income Stream Planning
+      income_gap_detected: "%{months}-Month Income Gap Detected"
+      income_gap_explanation: "Between %{start_date} and %{end_date}, you'll have no regular income. You'll need to bridge this gap with savings."
+      monthly_need: "Monthly Need:"
+      total_gap: "Total Gap:"
+      portfolio_coverage: "Portfolio Coverage:"
+      covered: Covered
+      insufficient: Insufficient
+      no_income_gap: No income gap - pension starts before salary ends!
+      key_milestones: Key Milestones
+      income_timeline: Income Timeline
+      todays_income: Today's Income
+      per_month: per month
+      at_retirement: At Retirement
+      per_month_after_salary: per month (after salary ends)
+      full_pension_income: Full Pension Income
+      per_month_all_pensions: per month (all pensions active)
+      add_dates_hint: Add salary end date and pension start dates to see your income timeline.
+      how_this_works: How This Works
+      pensions_fully_cover_explanation: "Your combined pension income of %{pension_income}/month fully covers your expected expenses of %{expenses}/month. You don't need to rely on your portfolio for regular income!"
+      pensions_partial_coverage: "Your pensions will cover %{pension_income} of your %{expenses} monthly expenses (%{coverage} coverage)."
+      portfolio_gap_explanation: "Your portfolio only needs to cover the %{gap} gap. Using a %{rate} withdrawal rate:"
+      ready_to_retire_now: "Since you have %{portfolio}, you're ready to retire!"
+      reach_goal_explanation: "At your current savings rate, you'll reach this goal in approximately %{years} years (%{date})."
+      portfolio_growth_projection: Portfolio Growth Projection
+      starting_value: Starting Value
+      contributions: Contributions
+      investment_returns: Investment Returns
+      final_value: Final Value
+      nominal_return: "Nominal Return:"
+      inflation: "Inflation:"
+      real_return: "Real Return:"
+      portfolio_value_over_time: Portfolio Value Over Time
+      projection_over_years: "Projection over %{years} years"
+      retirement_ready_in_years: "Retirement ready in %{years} years"
+      progress_history: Progress History
+      take_snapshot: Take Snapshot
+      no_snapshots_yet: No snapshots yet
+      no_snapshots_description: Take your first snapshot to start tracking your progress over time.
+      snapshots_explanation: Snapshots capture your current portfolio value and compare it against projections to validate your assumptions.
+      snapshots: Snapshots
+      tracking: Tracking
+      vs_projected: vs Projected
+      actual_vs_assumed_growth: Actual vs Assumed Growth
+      recent_snapshots: Recent Snapshots
+      date: Date
+      status: Status
+      last_calculated: "Last calculated:"
+      using_portfolio_value: "using portfolio value of"
+    apply_exploration:
+      success: "Exploration applied - retirement dates updated"
+      failure: "Could not apply the explored changes"

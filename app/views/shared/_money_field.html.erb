@@ -5,7 +5,7 @@
                    elsif form.object && form.object.respond_to?(currency_method)
                      form.object.public_send(currency_method)
                    end
-   currency = Money::Currency.new(currency_value || options[:default_currency] || "USD") %>
+   currency = Money::Currency.new(currency_value || options[:default_currency] || "EUR") %>
 
 <div class="form-field <%= options[:container_class] %>" data-controller="money-field">
   <% if options[:label_tooltip] %>

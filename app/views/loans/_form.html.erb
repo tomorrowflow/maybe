@@ -13,6 +13,12 @@
       </div>
 
       <div class="flex items-center gap-2">
+        <%= loan_form.date_field :start_date,
+                                label: "Loan Start Date",
+                                helper_text: "When did the loan originate?" %>
+      </div>
+
+      <div class="flex items-center gap-2">
         <%= loan_form.number_field :interest_rate,
                                  label: t("loans.form.interest_rate"),
                                  placeholder: t("loans.form.interest_rate_placeholder"),
@@ -59,6 +65,22 @@
                                  min: 0,
                                  max: 100,
                                  step: 0.01 %>
+      </div>
+
+      <div class="border-t border-secondary pt-4 mt-4">
+        <label class="flex items-start gap-3 cursor-pointer">
+          <%= loan_form.check_box :interest_only,
+                                  label: false,
+                                  class: "checkbox checkbox--light mt-0.5 shrink-0" %>
+          <div>
+            <span class="text-sm text-primary">Interest-only loan (tilgungsfreies Darlehen)</span>
+            <p class="text-xs text-tertiary mt-0.5">
+              Check this if you only pay interest each month and the principal balance remains unchanged.
+              Common for loans paired with a Bauspar contract or bullet repayment at maturity.
+              The retirement planner will use the interest-only payment instead of an annuity calculation.
+            </p>
+          </div>
+        </label>
       </div>
     <% end %>
   </div>

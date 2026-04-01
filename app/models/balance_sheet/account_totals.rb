@@ -1,7 +1,8 @@
 class BalanceSheet::AccountTotals
-  def initialize(family, sync_status_monitor:)
+  def initialize(family, sync_status_monitor:, person: nil)
     @family = family
     @sync_status_monitor = sync_status_monitor
+    @person = person
   end
 
   def asset_accounts
@@ -13,7 +14,7 @@ class BalanceSheet::AccountTotals
   end
 
   private
-    attr_reader :family, :sync_status_monitor
+    attr_reader :family, :sync_status_monitor, :person
 
     AccountRow = Data.define(:account, :converted_balance, :is_syncing) do
       def syncing? = is_syncing
@@ -24,7 +25,11 @@ class BalanceSheet::AccountTotals
     end
 
     def visible_accounts
-      @visible_accounts ||= family.accounts.visible.with_attached_logo
+      @visible_accounts ||= begin
+        scope = family.accounts.visible.with_attached_logo
+        scope = scope.for_person(person) if person.present?
+        scope
+      end
     end
 
     def account_rows
@@ -38,10 +43,8 @@ class BalanceSheet::AccountTotals
     end
 
     def cache_key
-      family.build_cache_key(
-        "balance_sheet_account_rows",
-        invalidate_on_data_updates: true
-      )
+      key = person.present? ? "balance_sheet_account_rows_person_#{person.id}" : "balance_sheet_account_rows"
+      family.build_cache_key(key, invalidate_on_data_updates: true)
     end
 
     def query

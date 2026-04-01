@@ -8,7 +8,7 @@ export default class extends Controller {
   }
 
   connect() {
-    this.steps = ["basics", "income", "portfolio"]
+    this.steps = ["basics", "cashflow", "income", "portfolio"]
     this.showStep(this.currentStepValue)
 
     // Listen for global events (nav elements are outside controller scope)

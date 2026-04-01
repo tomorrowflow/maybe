@@ -65,7 +65,27 @@ module ApplicationHelper
   def format_money(number_or_money, options = {})
     return nil unless number_or_money
 
+    family = Current.family
+    if family
+      fmt = Family::CountryDefaults.number_format_options(family.number_format)
+      options = fmt.merge(format: family.currency_format).merge(options)
+    end
+
     Money.new(number_or_money).format(options)
+  end
+
+  def format_number(number, options = {})
+    return nil unless number
+
+    fmt = Family::CountryDefaults.number_format_options(Current.family&.number_format)
+    number_with_delimiter(number, fmt.merge(options))
+  end
+
+  def format_percentage(number, options = {})
+    return nil unless number
+
+    fmt = Family::CountryDefaults.number_format_options(Current.family&.number_format)
+    number_to_percentage(number, { precision: 1 }.merge(fmt).merge(options))
   end
 
   def totals_by_currency(collection:, money_method:, separator: " | ", negate: false)

@@ -8,7 +8,9 @@
       <% exports.each do |export| %>
         <div class="flex items-center justify-between bg-container p-4 rounded-lg border border-primary">
           <div>
-            <p class="text-sm font-medium text-primary">Export from <%= export.created_at.strftime("%B %d, %Y at %I:%M %p") %></p>
+            <p class="text-sm font-medium text-primary">
+              <%= export.full_backup? ? "Full Backup" : "CSV Export" %> from <%= export.created_at.strftime("%B %d, %Y at %I:%M %p") %>
+            </p>
             <p class="text-xs text-secondary"><%= export.filename %></p>
           </div>
 

@@ -7,6 +7,7 @@ class InsurancesController < ApplicationController
     :policy_number,
     :premium_amount,
     :premium_frequency,
+    :start_date,
     :maturity_date,
     :cash_surrender_value
   )

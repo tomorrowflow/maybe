@@ -14,7 +14,7 @@
     <% end %>
 
     <%= summary_card title: "Repayment Progress" do %>
-      <%= number_to_percentage(loan.repayment_progress_percent, precision: 1) %>
+      <%= format_percentage(loan.repayment_progress_percent, precision: 1) %>
     <% end %>
   </div>
 
@@ -57,7 +57,7 @@
         <div>
           <div class="text-xs text-tertiary">Interest Rate</div>
           <div class="text-lg font-semibold">
-            <%= number_to_percentage(loan.interest_rate, precision: 2) %>
+            <%= format_percentage(loan.interest_rate, precision: 2) %>
           </div>
           <div class="text-xs text-tertiary"><%= loan.rate_type_description %></div>
         </div>

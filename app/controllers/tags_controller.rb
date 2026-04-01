@@ -3,6 +3,7 @@ class TagsController < ApplicationController
 
   def index
     @tags = Current.family.tags.alphabetically
+    @auto_tag_progress = AiProcessable.progress_for(Current.family, "auto_tag")
 
     render layout: "settings"
   end

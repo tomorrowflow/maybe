@@ -2,7 +2,12 @@
 
 <div class="grid grid-cols-3 gap-2">
   <%= summary_card title: t(".market_value") do %>
-    <%= format_money(account.balance_money) %>
+    <div class="flex flex-col">
+      <%= format_money(account.property.estimated_current_value) %>
+      <% if account.property.uses_hpi_projection? %>
+        <p class="text-xs text-secondary">based on <%= account.property.growth_rate_source %></p>
+      <% end %>
+    </div>
   <% end %>
 
   <%= summary_card title: t(".purchase_price") do %>
@@ -10,12 +15,20 @@
   <% end %>
 
   <%= summary_card title: t(".trend") do %>
-    <div class="flex items-center gap-1" style="color: <%= account.property.trend.color %>">
-      <p class="text-xl font-medium">
-        <%= account.property.trend.value %>
-      </p>
-
-      <p>(<%= account.property.trend.percent %>%)</p>
+    <div class="flex flex-col">
+      <div class="flex items-center gap-1" style="color: <%= account.property.trend.color %>">
+        <p class="text-xl font-medium">
+          <%= format_money(account.property.trend.value) %>
+        </p>
+        <p>(<%= account.property.trend.percent %>%)</p>
+      </div>
+      <% if account.property.uses_hpi_projection? %>
+        <p class="text-xs text-secondary"><%= account.property.growth_rate_source %> (<%= account.property.regional_growth_rate %>%/yr)</p>
+      <% elsif account.property.purchase_date.present? %>
+        <p class="text-xs text-secondary">since <%= account.property.purchase_date.strftime("%b %Y") %></p>
+      <% elsif account.first_valuation.present? %>
+        <p class="text-xs text-secondary">since <%= account.first_valuation.date.strftime("%b %Y") %></p>
+      <% end %>
     </div>
   <% end %>
 

@@ -1,0 +1,38 @@
+---
+de:
+  trades:
+    form:
+      account: Übertragungskonto (optional)
+      account_prompt: Konto suchen
+      amount: Betrag
+      holding: Tickersymbol
+      price: Preis pro Anteil
+      qty: Anzahl
+      submit: Transaktion hinzufügen
+      ticker_placeholder: SAP
+      type: Typ
+    header:
+      buy: Kaufen
+      current_market_price_label: Aktueller Marktpreis
+      overview: Übersicht
+      purchase_price_label: Kaufpreis
+      purchase_qty_label: Kaufmenge
+      sell: Verkaufen
+      symbol_label: Symbol
+      total_return_label: Unrealisierter Gewinn/Verlust
+    new:
+      title: Neue Transaktion
+    show:
+      additional: Zusätzlich
+      cost_per_share_label: Kosten pro Anteil
+      date_label: Datum
+      delete: Löschen
+      delete_subtitle: Diese Aktion kann nicht rückgängig gemacht werden
+      delete_title: Transaktion löschen
+      details: Details
+      exclude_subtitle: Diese Transaktion wird nicht in Berichte und Berechnungen einbezogen
+      exclude_title: Von Analysen ausschließen
+      note_label: Notiz
+      note_placeholder: Zusätzliche Notizen hier hinzufügen...
+      quantity_label: Anzahl
+      settings: Einstellungen

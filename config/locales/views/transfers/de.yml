@@ -1,0 +1,33 @@
+---
+de:
+  transfers:
+    create:
+      success: Überweisung erfolgreich erstellt
+    destroy:
+      success: Überweisung erfolgreich gelöscht
+    form:
+      amount: Betrag
+      date: Datum
+      from_account: Von Konto
+      from_account_prompt: Quellkonto auswählen
+      note: Notiz
+      note_placeholder: Notiz zu dieser Überweisung hinzufügen
+      submit: Überweisung erstellen
+      to_account: Auf Konto
+      to_account_prompt: Zielkonto auswählen
+    new:
+      title: Neue Überweisung
+    show:
+      amount: Betrag
+      date: Datum
+      delete: Löschen
+      delete_subtitle: Diese Aktion kann nicht rückgängig gemacht werden
+      delete_title: Überweisung löschen
+      details: Details
+      from_account: Von
+      note: Notiz
+      overview: Übersicht
+      settings: Einstellungen
+      to_account: Nach
+    update:
+      success: Überweisung erfolgreich aktualisiert

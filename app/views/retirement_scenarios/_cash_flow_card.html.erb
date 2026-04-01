@@ -1,0 +1,90 @@
+<%# locals: (scenario:) %>
+<% snapshot = scenario.cash_flow_snapshot %>
+<div id="explore-cash-flow-card">
+
+<div class="bg-container rounded-xl p-6 shadow-border-xs">
+  <h2 class="text-lg font-semibold text-primary mb-4">Monthly Cash Flow</h2>
+
+  <div class="space-y-3">
+    <!-- Income -->
+    <div class="flex justify-between items-center">
+      <span class="font-medium text-primary">After-tax Income</span>
+      <span class="text-lg font-bold text-primary"><%= format_money snapshot.income_money %></span>
+    </div>
+
+    <% if snapshot.incoming_payments.any? %>
+      <div class="pl-4 space-y-1">
+        <% snapshot.incoming_payments.each do |payment| %>
+          <div class="flex justify-between items-center text-sm">
+            <div class="flex items-center gap-2">
+              <%= icon "arrow-down-left", size: "sm", class: "text-green-600" %>
+              <span class="text-secondary"><%= payment[:name] %> (loan repayment to you)</span>
+            </div>
+            <div class="text-right">
+              <span class="text-green-600">+<%= format_money Money.new(payment[:monthly_amount], scenario.family.currency) %></span>
+              <% if payment[:end_date].present? %>
+                <span class="text-xs text-secondary ml-1">(ends <%= payment[:end_date].strftime("%b %Y") %>)</span>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <!-- Fixed Obligations -->
+    <div class="border-t border-secondary pt-3">
+      <div class="flex justify-between items-center mb-2">
+        <span class="font-medium text-primary">Fixed Obligations</span>
+        <span class="text-lg font-bold text-red-600">-<%= format_money snapshot.obligations_money %></span>
+      </div>
+
+      <% snapshot.obligation_details.each do |obligation| %>
+        <div class="flex justify-between items-center text-sm pl-4">
+          <div class="flex items-center gap-2">
+            <% icon_name = obligation[:type] == :bauspar ? "piggy-bank" : "landmark" %>
+            <%= icon icon_name, size: "sm", class: "text-secondary" %>
+            <span class="text-secondary"><%= obligation[:name] %></span>
+          </div>
+          <div class="text-right">
+            <span class="text-primary">-<%= format_money Money.new(obligation[:monthly_amount], scenario.family.currency) %></span>
+            <% if obligation[:end_date].present? %>
+              <span class="text-xs text-secondary ml-1">(ends <%= obligation[:end_date].strftime("%b %Y") %>)</span>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <% if snapshot.obligation_details.empty? %>
+        <p class="text-sm text-secondary pl-4">No fixed obligations detected</p>
+      <% end %>
+    </div>
+
+    <!-- Living Expenses -->
+    <div class="border-t border-secondary pt-3">
+      <div class="flex justify-between items-center">
+        <span class="font-medium text-primary">Living Expenses</span>
+        <span class="text-lg font-bold text-red-600">-<%= format_money snapshot.living_expenses_money %></span>
+      </div>
+    </div>
+
+    <!-- Monthly Savings -->
+    <div class="border-t-2 border-primary pt-3">
+      <div class="flex justify-between items-center">
+        <span class="font-semibold text-primary">Monthly Savings</span>
+        <span class="text-xl font-bold <%= snapshot.can_save? ? "text-green-600" : "text-red-600" %>">
+          <%= format_money snapshot.savings_money %>
+        </span>
+      </div>
+      <% if snapshot.can_save? %>
+        <div class="text-xs text-secondary text-right mt-1">
+          <%= format_percentage snapshot.savings_rate, precision: 1 %> savings rate
+        </div>
+      <% else %>
+        <div class="text-xs text-red-600 text-right mt-1">
+          Expenses exceed income &mdash; no savings capacity
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+</div>

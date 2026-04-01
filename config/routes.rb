@@ -56,6 +56,9 @@ Rails.application.routes.draw do
 
   namespace :settings do
     resource :profile, only: [ :show, :destroy ]
+    resources :persons, only: %i[create update] do
+      resources :deletions, only: %i[new create], module: :person
+    end
     resource :preferences, only: :show
     resource :hosting, only: %i[show update] do
       delete :clear_cache, on: :collection
@@ -100,6 +103,8 @@ Rails.application.routes.draw do
   resources :retirement_scenarios do
     member do
       post :recalculate
+      get :explore
+      patch :apply_exploration
     end
   end
 

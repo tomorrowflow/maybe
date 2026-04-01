@@ -18,13 +18,13 @@ class AccountTest < ActiveSupport::TestCase
     account = @family.accounts.create!(
       name: "Test Investment",
       balance: 1000,
-      currency: "USD",
-      subtype: "hsa",
+      currency: "EUR",
+      subtype: "riester",
       accountable: Investment.new
     )
 
-    assert_equal "HSA", account.short_subtype_label
-    assert_equal "Health Savings Account", account.long_subtype_label
+    assert_equal "Riester", account.short_subtype_label
+    assert_equal "Riester Pension (Riester-Rente)", account.long_subtype_label
 
     # Test with nil subtype
     account.update!(subtype: nil)

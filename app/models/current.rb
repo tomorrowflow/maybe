@@ -16,4 +16,10 @@ class Current < ActiveSupport::CurrentAttributes
   def true_user
     session&.user
   end
+
+  # Returns the currently filtered person, or nil for "Everyone" view
+  def person
+    return nil unless session&.data&.dig("person_id")
+    family&.persons&.find_by(id: session.data["person_id"])
+  end
 end

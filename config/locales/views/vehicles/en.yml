@@ -5,14 +5,14 @@ en:
       edit: Edit %{account}
     form:
       make: Make
-      make_placeholder: Toyota
+      make_placeholder: Volkswagen
       mileage: Mileage
-      mileage_placeholder: '15000'
+      mileage_placeholder: '45000'
       mileage_unit: Unit
       model: Model
-      model_placeholder: Camry
+      model_placeholder: Golf
       year: Year
-      year_placeholder: '2023'
+      year_placeholder: '2022'
     new:
       title: Enter vehicle details
     overview:

@@ -1,0 +1,180 @@
+---
+de:
+  retirement_scenarios:
+    create:
+      success: Rentenplan erfolgreich erstellt
+    update:
+      success: Szenario aktualisiert
+    destroy:
+      success: Szenario gelöscht
+    recalculate:
+      success: Szenario neu berechnet und Snapshot gespeichert
+    index:
+      title: Ruhestandsplanung
+      new_plan: Neuer Plan
+      search_placeholder: Pläne durchsuchen...
+      primary_plan_summary: Zusammenfassung Hauptplan
+      ready: Bereit!
+      complete: Vollständig
+      portfolio: Portfolio
+      required: Benötigt
+      gap: Lücke
+      none: Keine
+      retire: Ruhestand
+      today: Heute!
+      plan_name: Planname
+      progress: Fortschritt
+      retirement: Ruhestand
+      actions: Aktionen
+      plan:
+        one: Plan
+        other: Pläne
+      primary: Primär
+      ready_to_retire: Bereit für den Ruhestand!
+      target: "Ziel:"
+      calculating: Berechne...
+      monthly_expenses: "Monatliche Ausgaben:"
+      years: Jahre
+      view: Anzeigen
+      edit: Bearbeiten
+      delete: Löschen
+      delete_confirm: Diesen Plan löschen?
+      empty:
+        title: Planen Sie Ihren Ruhestand
+        description: Berechnen Sie, wann Sie in Rente gehen können, basierend auf Ihrem Renteneinkommen, erwarteten Ausgaben und Ihrem Anlageportfolio.
+        cta: Ersten Plan erstellen
+    new:
+      basics:
+        title: Planen Sie Ihren Ruhestand
+        subtitle: Beginnen Sie mit Ihren grundlegenden Ruhestandszielen und erwarteten Ausgaben.
+      income:
+        title: Ihr Ruhestandseinkommen
+        subtitle: Geben Sie Ihre erwarteten Renten- und Einkommensquellen ein.
+      portfolio:
+        title: Portfolio-Strategie
+        subtitle: Legen Sie Ihre Entnahmerate und Wachstumsannahmen fest.
+      submit: Plan erstellen
+    edit:
+      basics:
+        title: Grundlegende Ruhestandsziele
+        subtitle: Aktualisieren Sie Ihren Plannamen und Zielausgaben.
+      income:
+        title: Ihr Ruhestandseinkommen
+        subtitle: Aktualisieren Sie Ihre erwarteten Renten- und Einkommensquellen.
+      portfolio:
+        title: Portfolio-Strategie
+        subtitle: Aktualisieren Sie Ihre Entnahmerate und Wachstumsannahmen.
+      submit: Änderungen speichern
+    form:
+      plan_name: Planname
+      plan_name_placeholder: Mein Ruhestandsplan
+      monthly_expenses: Monatliche Ausgaben im Ruhestand
+      monthly_expenses_info_title: Was sollte ich einbeziehen?
+      monthly_expenses_info_text: Beziehen Sie alle erwarteten monatlichen Kosten ein Wohnen, Essen, Gesundheit, Reisen, Hobbys und alle regelmäßigen Ausgaben, die Sie im Ruhestand erwarten.
+      continue: Weiter
+      last_day_of_salary: Letzter Gehaltszahltag
+      current_annual_salary: Aktuelles Jahresgehalt
+      state_pension: Gesetzliche Rente
+      start_date: Startdatum
+      monthly_amount: Monatlicher Betrag
+      private_pension_plans: Private Rentenversicherungen
+      current_value: Aktueller Wert
+      expected_monthly_payout: Erwartete monatliche Auszahlung
+      from_account: "Aus Konto:"
+      payout_start_date: Auszahlungsbeginn
+      pension_prefill_note: Werte werden aus Ihren Rentenkontoeinstellungen vorausgefüllt. Sie können sie hier für dieses Szenario überschreiben.
+      no_pension_accounts: Keine Rentenkonten gefunden.
+      add_pension_accounts_hint: Fügen Sie Riester-, Rürup- oder Betriebsrentenkonten zu Ihrem Portfolio hinzu, um sie hier einzubeziehen.
+      other_pension_sources: Andere Rentenquellen
+      safe_withdrawal_rate: Sichere Entnahmerate (%)
+      withdrawal_rate_info_title: Was ist eine sichere Entnahmerate?
+      withdrawal_rate_info_text: Der Prozentsatz, den Sie jährlich entnehmen können, ohne Ihr Portfolio aufzubrauchen. Konservativ 3-3,5%, Moderat 4%, Aggressiv 5%
+      growth_assumptions: Wachstumsannahmen
+      expected_annual_return: Erwartete Jahresrendite (%)
+      expected_inflation: Erwartete Inflation (%)
+      monthly_contribution: Monatlicher Beitrag
+      monthly_contribution_placeholder: Leer lassen für automatische Berechnung
+      monthly_contribution_hint: Bei leerem Feld berechnen wir aus Ihrer Sparhistorie.
+      compound_growth_title: Zinseszinseffekt
+      compound_growth_text: Das Wachstum Ihres Portfolios beschleunigt sich im Laufe der Zeit dank der Zinseszinsen auf Ihre Beiträge und Anlagegewinne.
+    wizard_nav:
+      basics: Grundlagen
+      income: Einkommen
+      portfolio: Portfolio
+    show:
+      recalculate: Neu berechnen
+      edit: Bearbeiten
+      retirement_readiness: Ruhestandsbereitschaft
+      current_portfolio: Aktuelles Portfolio
+      required_portfolio: Benötigtes Portfolio
+      portfolio: Portfolio
+      gap: Lücke
+      ready: Bereit!
+      progress: Fortschritt
+      can_retire_today: Sie können heute in Rente gehen!
+      projected_retirement_date: Voraussichtliches Renteneintrittsdatum
+      years_from_now: Jahre ab jetzt
+      unable_to_project: Kann Renteneintrittsdatum mit aktueller Sparrate nicht berechnen
+      income_breakdown: Einkommensübersicht
+      monthly_expenses_in_retirement: "Monatliche Ausgaben im Ruhestand:"
+      pension_income_sources: "Renteneinkommensquellen:"
+      gesetzliche_rente: "Gesetzliche Rente:"
+      other_pension: "Andere Rente:"
+      total_pensions: "Gesamtrenten:"
+      portfolio_must_cover: "Portfolio muss decken:"
+      pensions_fully_cover: Renten decken Ihre Ausgaben vollständig!
+      using_withdrawal_rate: "Mit %{rate} Entnahmerate:"
+      required_portfolio_for_gap: "Benötigtes Portfolio für Lücke:"
+      your_current_portfolio: "Ihr aktuelles Portfolio:"
+      income_stream_planning: Einkommensstromplanung
+      income_gap_detected: "%{months}-Monatige Einkommenslücke erkannt"
+      income_gap_explanation: "Zwischen %{start_date} und %{end_date} haben Sie kein regelmäßiges Einkommen. Sie müssen diese Lücke mit Ersparnissen überbrücken."
+      monthly_need: "Monatlicher Bedarf:"
+      total_gap: "Gesamtlücke:"
+      portfolio_coverage: "Portfolio-Abdeckung:"
+      covered: Abgedeckt
+      insufficient: Unzureichend
+      no_income_gap: Keine Einkommenslücke - Rente beginnt vor Gehaltsende!
+      key_milestones: Wichtige Meilensteine
+      income_timeline: Einkommenszeitstrahl
+      todays_income: Heutiges Einkommen
+      per_month: pro Monat
+      at_retirement: Bei Renteneintritt
+      per_month_after_salary: pro Monat (nach Gehaltsende)
+      full_pension_income: Volles Renteneinkommen
+      per_month_all_pensions: pro Monat (alle Renten aktiv)
+      add_dates_hint: Fügen Sie Gehaltsendedatum und Rentenstart hinzu, um Ihren Einkommenszeitstrahl zu sehen.
+      how_this_works: So funktioniert es
+      pensions_fully_cover_explanation: "Ihr kombiniertes Renteneinkommen von %{pension_income}/Monat deckt Ihre erwarteten Ausgaben von %{expenses}/Monat vollständig ab. Sie müssen sich nicht auf Ihr Portfolio für regelmäßiges Einkommen verlassen!"
+      pensions_partial_coverage: "Ihre Renten decken %{pension_income} Ihrer monatlichen Ausgaben von %{expenses} ab (%{coverage} Abdeckung)."
+      portfolio_gap_explanation: "Ihr Portfolio muss nur die Lücke von %{gap} decken. Mit einer Entnahmerate von %{rate}:"
+      ready_to_retire_now: "Da Sie %{portfolio} haben, sind Sie bereit für den Ruhestand!"
+      reach_goal_explanation: "Bei Ihrer aktuellen Sparrate erreichen Sie dieses Ziel in etwa %{years} Jahren (%{date})."
+      portfolio_growth_projection: Portfolio-Wachstumsprognose
+      starting_value: Startwert
+      contributions: Beiträge
+      investment_returns: Anlagerenditen
+      final_value: Endwert
+      nominal_return: "Nominale Rendite:"
+      inflation: "Inflation:"
+      real_return: "Reale Rendite:"
+      portfolio_value_over_time: Portfoliowert über Zeit
+      projection_over_years: "Prognose über %{years} Jahre"
+      retirement_ready_in_years: "Ruhestandsbereit in %{years} Jahren"
+      progress_history: Fortschrittsverlauf
+      take_snapshot: Snapshot erstellen
+      no_snapshots_yet: Noch keine Snapshots
+      no_snapshots_description: Erstellen Sie Ihren ersten Snapshot, um Ihren Fortschritt über die Zeit zu verfolgen.
+      snapshots_explanation: Snapshots erfassen Ihren aktuellen Portfoliowert und vergleichen ihn mit Prognosen, um Ihre Annahmen zu validieren.
+      snapshots: Snapshots
+      tracking: Tracking
+      vs_projected: vs Prognose
+      actual_vs_assumed_growth: Tatsächliches vs angenommenes Wachstum
+      recent_snapshots: Aktuelle Snapshots
+      date: Datum
+      status: Status
+      last_calculated: "Zuletzt berechnet:"
+      using_portfolio_value: "mit Portfoliowert von"
+    apply_exploration:
+      success: "Erkundung angewendet - Rentendaten aktualisiert"
+      failure: "Die erkundeten Änderungen konnten nicht angewendet werden"

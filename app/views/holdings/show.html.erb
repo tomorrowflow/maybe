@@ -26,7 +26,7 @@
 
           <div class="flex items-center justify-between text-sm">
             <dt class="text-secondary"><%= t(".portfolio_weight_label") %></dt>
-            <dd class="text-primary"><%= @holding.weight ? number_to_percentage(@holding.weight, precision: 2) : t(".unknown") %></dd>
+            <dd class="text-primary"><%= @holding.weight ? format_percentage(@holding.weight, precision: 2) : t(".unknown") %></dd>
           </div>
 
           <div class="flex items-center justify-between text-sm">

@@ -1,0 +1,14 @@
+<div id="explore-income-timeline">
+  <% if scenario.salary_end_date.present? || scenario.gesetzliche_rente_start_date.present? || scenario.pension_sources.with_payout.any? %>
+    <div class="mb-4">
+      <h3 class="text-sm font-semibold text-secondary mb-3"><%= t("retirement_scenarios.show.income_timeline") %></h3>
+      <% timeline_builder = RetirementScenario::IncomeTimelineBuilder.new(scenario) %>
+      <% chart_data = timeline_builder.build_chart_data(years: 25) %>
+      <div id="income-timeline-chart-<%= scenario.id %>" class="w-full h-80" data-controller="income-timeline-chart" data-income-timeline-chart-data-value="<%= chart_data.to_json %>"></div>
+    </div>
+  <% else %>
+    <div class="p-4 bg-surface-inset rounded-lg text-center text-secondary">
+      <p><%= t("retirement_scenarios.show.add_dates_hint") %></p>
+    </div>
+  <% end %>
+</div>

@@ -8,8 +8,10 @@ class LoansController < ApplicationController
     :effective_interest_rate,
     :term_months,
     :initial_balance,
+    :start_date,
     :fixed_rate_end_date,
     :maturity_date,
-    :extra_payment_allowance_percent
+    :extra_payment_allowance_percent,
+    :interest_only
   )
 end

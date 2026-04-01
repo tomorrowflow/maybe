@@ -1,0 +1,39 @@
+---
+de:
+  categories:
+    bootstrap:
+      success: Standardkategorien erfolgreich erstellt
+    category:
+      delete: Kategorie löschen
+      edit: Kategorie bearbeiten
+    create:
+      success: Kategorie erfolgreich erstellt
+    destroy:
+      success: Kategorie erfolgreich gelöscht
+    edit:
+      edit: Kategorie bearbeiten
+    form:
+      placeholder: Kategoriename
+    index:
+      bootstrap: Standardwerte verwenden (empfohlen)
+      categories: Kategorien
+      categories_expenses: Ausgabenkategorien
+      categories_incomes: Einnahmenkategorien
+      empty: Keine Kategorien gefunden
+      new: Neue Kategorie
+      reprocess: Automatisch kategorisieren
+      reprocess_tooltip: KI verwenden, um nicht kategorisierte Transaktionen automatisch zu kategorisieren
+    reprocess:
+      success: "%{count} Transaktionen zur KI-Kategorisierung in Warteschlange gestellt"
+      no_transactions: Keine Transaktionen zum Kategorisieren
+    menu:
+      loading: Laden...
+    new:
+      new_category: Neue Kategorie
+    update:
+      success: Kategorie erfolgreich aktualisiert
+  category:
+    dropdowns:
+      show:
+        bootstrap: Standardkategorien generieren
+        empty: Keine Kategorien gefunden

@@ -1,4 +1,6 @@
 class Family::AutoTagger
+  include AiProcessable
+
   Error = Class.new(StandardError)
 
   def initialize(family, transaction_ids: [])
@@ -12,21 +14,32 @@ class Family::AutoTagger
       return
     end
 
-    Rails.logger.info("Auto-tagging #{scope.count} transactions for family #{family.id}")
+    total = scope.count
+    Rails.logger.info("Auto-tagging #{total} transactions for family #{family.id}")
+    init_progress(total)
 
     # First pass: try keyword matching (fast, free)
     remaining_transactions = tag_with_keywords
 
+    rule_matched = total - remaining_transactions.count
+    update_progress(processed: rule_matched, rule_matched: rule_matched)
+
     # Second pass: use AI for remaining transactions
     if remaining_transactions.any? && llm_provider
-      tag_with_ai(remaining_transactions)
+      tag_with_ai(remaining_transactions, rule_matched: rule_matched)
     elsif remaining_transactions.any?
       Rails.logger.info("No LLM provider available, #{remaining_transactions.count} transactions left without tags")
     end
+
+    complete_progress
   end
 
   private
     attr_reader :family, :transaction_ids
+
+    def job_type
+      "auto_tag"
+    end
 
     def tag_with_keywords
       remaining = []
@@ -47,8 +60,10 @@ class Family::AutoTagger
       remaining
     end
 
-    def tag_with_ai(transactions)
+    def tag_with_ai(transactions, rule_matched:)
       Rails.logger.info("Using AI to tag #{transactions.count} transactions")
+
+      ai_processed = 0
 
       # Process in batches of 25 (provider limit)
       transactions.each_slice(25) do |batch|
@@ -70,6 +85,8 @@ class Family::AutoTagger
 
         unless result.success?
           Rails.logger.error("Failed to auto-tag batch for family #{family.id}: #{result.error.message}")
+          ai_processed += batch.size
+          update_progress(processed: rule_matched + ai_processed, ai_processed: ai_processed)
           next
         end
 
@@ -85,6 +102,8 @@ class Family::AutoTagger
           transaction.save!
         end
 
+        ai_processed += batch.size
+        update_progress(processed: rule_matched + ai_processed, ai_processed: ai_processed)
         Rails.logger.info("Tagged batch of #{batch.count} transactions")
       end
     end

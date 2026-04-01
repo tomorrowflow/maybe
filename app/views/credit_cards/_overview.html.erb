@@ -14,7 +14,7 @@
   <% end %>
 
   <%= summary_card title: t(".apr") do %>
-    <%= account.credit_card.apr ? number_to_percentage(account.credit_card.apr, precision: 2) : t(".unknown") %>
+    <%= account.credit_card.apr ? format_percentage(account.credit_card.apr, precision: 2) : t(".unknown") %>
   <% end %>
 
   <%= summary_card title: t(".expiration_date") do %>

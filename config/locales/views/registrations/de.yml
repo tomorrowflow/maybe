@@ -1,0 +1,24 @@
+---
+de:
+  helpers:
+    label:
+      user:
+        invite_code: Einladungscode
+    submit:
+      user:
+        create: Weiter
+  registrations:
+    create:
+      failure: Bei der Registrierung ist ein Problem aufgetreten.
+      invalid_invite_code: Ungültiger Einladungscode, bitte versuchen Sie es erneut.
+      success: Sie haben sich erfolgreich registriert.
+    new:
+      invitation_message: "%{inviter} hat Sie eingeladen, als %{role} beizutreten"
+      join_family_title: "%{family} beitreten"
+      role_admin: Administrator
+      role_member: Mitglied
+      submit: Konto erstellen
+      title: Erstellen Sie Ihr Konto
+      welcome_body: Um zu beginnen, müssen Sie sich für ein neues Konto registrieren. Sie können dann zusätzliche Einstellungen in der App konfigurieren.
+      welcome_title: Willkommen bei Self-Hosted Maybe!
+      password_placeholder: Passwort eingeben

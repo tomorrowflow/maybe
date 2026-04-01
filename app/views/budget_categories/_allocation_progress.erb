@@ -12,7 +12,7 @@
       <p class="text-primary text-sm">&gt; 100% set</p>
     <% else %>
       <p class="text-secondary text-sm">
-        <%= number_to_percentage(budget.allocated_percent, precision: 0) %> set
+        <%= format_percentage(budget.allocated_percent, precision: 0) %> set
       </p>
     <% end %>
 

@@ -1,0 +1,19 @@
+<%= turbo_stream.replace "explore-readiness-card" do %>
+  <%= render "retirement_scenarios/readiness_card", scenario: @explored %>
+<% end %>
+
+<%= turbo_stream.replace "explore-cash-flow-card" do %>
+  <%= render "retirement_scenarios/cash_flow_card", scenario: @explored %>
+<% end %>
+
+<%= turbo_stream.replace "explore-income-breakdown" do %>
+  <%= render "retirement_scenarios/income_breakdown", scenario: @explored %>
+<% end %>
+
+<%= turbo_stream.replace "explore-income-timeline" do %>
+  <%= render "retirement_scenarios/income_timeline_section", scenario: @explored %>
+<% end %>
+
+<%= turbo_stream.replace "explore-portfolio-projection" do %>
+  <%= render "retirement_scenarios/portfolio_projection_section", scenario: @explored %>
+<% end %>

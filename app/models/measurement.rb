@@ -1,9 +1,17 @@
 class Measurement
   include ActiveModel::Validations
+  include ActiveSupport::NumberHelper
 
   attr_reader :value, :unit
 
-  VALID_UNITS = %w[sqft sqm mi km]
+  VALID_UNITS = %w[sqft sqm mi km].freeze
+
+  UNIT_LABELS = {
+    "sqft" => "sq ft",
+    "sqm" => "m\u00B2",
+    "mi" => "mi",
+    "km" => "km"
+  }.freeze
 
   validates :unit, inclusion: { in: VALID_UNITS }
   validates :value, presence: true
@@ -15,6 +23,10 @@ class Measurement
   end
 
   def to_s
-    "#{@value.to_i} #{@unit}"
+    "#{number_to_delimited(@value.to_i)} #{UNIT_LABELS[@unit] || @unit}"
+  end
+
+  def label
+    UNIT_LABELS[@unit] || @unit
   end
 end

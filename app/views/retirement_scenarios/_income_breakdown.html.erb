@@ -1,0 +1,75 @@
+<div id="explore-income-breakdown">
+  <div class="bg-container rounded-xl p-6 shadow-border-xs">
+    <h2 class="text-lg font-semibold text-primary mb-4"><%= t("retirement_scenarios.show.income_breakdown") %></h2>
+
+    <div class="space-y-3">
+      <div class="flex justify-between">
+        <span class="font-medium text-primary"><%= t("retirement_scenarios.show.monthly_expenses_in_retirement") %></span>
+        <span class="text-primary"><%= format_money scenario.retirement_monthly_expenses_money %></span>
+      </div>
+
+      <div class="border-t border-secondary pt-3">
+        <div class="font-medium text-primary mb-2"><%= t("retirement_scenarios.show.pension_income_sources") %></div>
+
+        <% if scenario.gesetzliche_rente_monthly.present? %>
+          <div class="flex justify-between text-sm">
+            <span class="text-secondary"><%= t("retirement_scenarios.show.gesetzliche_rente") %></span>
+            <span class="text-primary"><%= format_money scenario.gesetzliche_rente_monthly_money %></span>
+          </div>
+        <% end %>
+
+        <% scenario.pension_sources.with_payout.includes(:account).each do |pension_source| %>
+          <div class="flex justify-between text-sm">
+            <span class="text-secondary"><%= pension_source.account.name %> (<%= pension_source.account.short_subtype_label %>):</span>
+            <span class="text-primary"><%= format_money pension_source.expected_monthly_payout_money %></span>
+          </div>
+        <% end %>
+
+        <% if scenario.other_pension_monthly.present? %>
+          <div class="flex justify-between text-sm">
+            <span class="text-secondary"><%= t("retirement_scenarios.show.other_pension") %></span>
+            <span class="text-primary"><%= format_money scenario.other_pension_monthly_money %></span>
+          </div>
+        <% end %>
+
+        <div class="flex justify-between font-semibold border-t border-secondary mt-2 pt-2">
+          <span class="text-primary"><%= t("retirement_scenarios.show.total_pensions") %></span>
+          <span class="text-primary">
+            <%= format_money scenario.total_pension_income_money %>
+            <span class="text-sm text-secondary">(<%= format_percentage(scenario.pension_coverage_percent, precision: 0) %>)</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="border-t border-secondary pt-3">
+        <div class="flex justify-between font-medium">
+          <span class="text-primary"><%= t("retirement_scenarios.show.portfolio_must_cover") %></span>
+          <span class="<%= scenario.pension_self_sufficient? ? "text-green-600" : "text-primary" %>">
+            <%= format_money scenario.income_gap_monthly_money %>
+            <span class="text-sm text-secondary">(<%= 100 - scenario.pension_coverage_percent %>%)</span>
+          </span>
+        </div>
+
+        <% if scenario.pension_self_sufficient? %>
+          <div class="text-sm text-green-600 mt-1"><%= icon "check", class: "w-4 h-4 inline" %> <%= t("retirement_scenarios.show.pensions_fully_cover") %></div>
+        <% end %>
+      </div>
+
+      <div class="border-t border-secondary pt-3">
+        <div class="flex justify-between text-sm">
+          <span class="text-secondary"><%= t("retirement_scenarios.show.using_withdrawal_rate", rate: format_percentage(scenario.portfolio_withdrawal_rate, precision: 1)) %></span>
+        </div>
+        <div class="flex justify-between font-medium">
+          <span class="text-primary"><%= t("retirement_scenarios.show.required_portfolio_for_gap") %></span>
+          <span class="text-primary"><%= format_money scenario.required_portfolio_value_money %></span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-primary"><%= t("retirement_scenarios.show.your_current_portfolio") %></span>
+          <span class="font-semibold <%= scenario.can_retire_now? ? "text-green-600" : "text-primary" %>">
+            <%= format_money scenario.current_portfolio_value_money %>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

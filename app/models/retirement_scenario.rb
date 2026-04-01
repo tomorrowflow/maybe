@@ -2,10 +2,20 @@ class RetirementScenario < ApplicationRecord
   include Monetizable
 
   belongs_to :family
+  belongs_to :person, optional: true
   has_many :pension_sources, class_name: "RetirementScenarioPensionSource", dependent: :destroy
   has_many :snapshots, class_name: "RetirementScenarioSnapshot", dependent: :destroy
+  has_many :retirement_scenario_persons, dependent: :destroy
+  has_many :scenario_persons, through: :retirement_scenario_persons, source: :person
+  has_many :milestones, class_name: "RetirementScenarioMilestone", dependent: :destroy
+  has_many :linked_payments, class_name: "RetirementScenarioLinkedPayment", dependent: :destroy
 
   accepts_nested_attributes_for :pension_sources, allow_destroy: true, reject_if: :all_blank
+  accepts_nested_attributes_for :retirement_scenario_persons, allow_destroy: true, reject_if: :all_blank
+  accepts_nested_attributes_for :milestones, allow_destroy: true, reject_if: :all_blank
+  accepts_nested_attributes_for :linked_payments, allow_destroy: true, reject_if: :all_blank
+
+  enum :scenario_type, { household: "household", personal: "personal", joint: "joint" }, default: :household
 
   validates :name, presence: true
   validates :calculation_date, presence: true
@@ -35,9 +45,12 @@ class RetirementScenario < ApplicationRecord
            :total_pension_income,
            :income_gap_monthly,
            :required_portfolio_value,
-           :portfolio_gap
+           :portfolio_gap,
+           :after_tax_monthly_income,
+           :monthly_living_expenses
 
   before_save :calculate_retirement_metrics
+  after_save :build_auto_milestones, if: :saved_change_to_calculation_date?
 
   # Main calculation: Modified 4% rule for gap coverage
   def calculate_retirement_metrics
@@ -59,8 +72,8 @@ class RetirementScenario < ApplicationRecord
       0  # Pensions fully cover expenses!
     end
 
-    # Step 4: Compare to current portfolio
-    self.current_portfolio_value = family.balance_sheet.net_worth
+    # Step 4: Compare to current portfolio (scoped by scenario type)
+    self.current_portfolio_value = scoped_portfolio_value
     self.portfolio_gap = required_portfolio_value - current_portfolio_value
 
     # Step 5: Project retirement date
@@ -73,6 +86,14 @@ class RetirementScenario < ApplicationRecord
 
   # Sum all pension income sources
   def calculate_total_pension_income
+    # For personal/joint scenarios with retirement_scenario_persons, use per-person income
+    if retirement_scenario_persons.any? && !household?
+      return retirement_scenario_persons.sum do |rsp|
+        (rsp.state_pension_monthly || 0) + (rsp.post_retirement_income_monthly || 0)
+      end + pension_sources_total + (other_pension_monthly || 0)
+    end
+
+    # Legacy/household calculation
     total = 0
 
     # State pension (Gesetzliche Rente)
@@ -216,31 +237,116 @@ class RetirementScenario < ApplicationRecord
   end
 
   # Generate month-by-month portfolio projections with compound interest
+  # Uses account-level growth rates where available, falling back to portfolio_growth_rate
+  # Contribution is dynamic: changes at milestone dates (debt payoff, salary changes, etc.)
   def generate_projections(months: nil)
     months ||= months_until_retirement || 360  # Default to 30 years
 
-    portfolio_value = current_portfolio_value
-    contribution = monthly_contribution || median_monthly_surplus
-    monthly_growth_rate = (portfolio_growth_rate || 7.0) / 100.0 / 12.0
+    base_contribution = monthly_contribution || effective_monthly_savings
+    base_living_expenses = effective_living_expenses.to_f
+    base_income = effective_monthly_income.to_f
+    inf_rate = (inflation_rate || 3.0) / 100.0
+    fallback_rate = portfolio_growth_rate || 7.0
+
+    # Pre-load milestones for efficient date lookups
+    sorted_milestones = milestones.chronological.to_a
+
+    # Pre-build pension cashout events
+    cashout_events = build_cashout_events(fallback_rate)
+
+    # Get accounts scoped by scenario type for projection
+    accounts = scoped_accounts.to_a
+
+    # Initialize account projectors with their values
+    account_data = accounts.map do |account|
+      projector = AccountProjector.new(account, fallback_growth_rate: fallback_rate)
+      {
+        projector: projector,
+        value: projector.current_value,
+        monthly_rate: projector.monthly_growth_rate,
+        contribution_eligible: projector.contribution_eligible?
+      }
+    end
+
+    # Calculate total contribution-eligible balance for weighted distribution
+    eligible_total = account_data.select { |a| a[:contribution_eligible] }
+                                 .sum { |a| a[:value] }
 
     projections = []
+    active_adjustments = 0
 
     months.times do |month|
-      # Apply monthly investment return
-      investment_return = portfolio_value * monthly_growth_rate
+      projection_date = calculation_date + (month + 1).months
 
-      # Add contribution
-      portfolio_value = portfolio_value + investment_return + contribution
+      # Expense inflation: expenses grow each year
+      years_elapsed = month / 12
+      inflation_factor = (1 + inf_rate) ** years_elapsed
 
-      # Check if can retire at this point
+      # Check if any milestones kick in this month
+      sorted_milestones.each do |milestone|
+        next unless milestone.date.year == projection_date.year && milestone.date.month == projection_date.month
+
+        case milestone.milestone_type
+        when "debt_payoff", "bauspar_phase_change"
+          active_adjustments += (milestone.amount || 0)
+        when "income_start"
+          active_adjustments += (milestone.amount || 0)
+        when "income_stop"
+          active_adjustments -= (milestone.amount || 0)
+        end
+      end
+
+      # Dynamic contribution: base + milestone adjustments, adjusted for expense inflation
+      # As expenses grow with inflation, savings shrink (income stays flat in real terms)
+      inflation_drag = base_living_expenses * (inflation_factor - 1)
+      contribution = base_contribution + active_adjustments - inflation_drag
+      contribution = [ contribution, 0 ].max
+
+      total_return = 0
+      cashout_injection = 0
+
+      # Check for pension cashout lump sums this month
+      cashout_events.each do |event|
+        if event[:date].year == projection_date.year && event[:date].month == projection_date.month
+          cashout_injection += event[:amount]
+        end
+      end
+
+      # Project each account forward one month
+      account_data.each do |data|
+        growth = data[:value] * data[:monthly_rate]
+        total_return += growth
+
+        account_contribution = if data[:contribution_eligible] && eligible_total > 0
+          (data[:value] / eligible_total) * contribution
+        else
+          0
+        end
+
+        data[:value] = data[:value] + growth + account_contribution
+      end
+
+      # Sum all account values + cashout injection
+      portfolio_value = account_data.sum { |a| a[:value] } + cashout_injection
+
+      # If there was a cashout, add it to the first eligible account for tracking
+      if cashout_injection > 0 && account_data.any? { |a| a[:contribution_eligible] }
+        first_eligible = account_data.find { |a| a[:contribution_eligible] }
+        first_eligible[:value] += cashout_injection if first_eligible
+      end
+
+      eligible_total = account_data.select { |a| a[:contribution_eligible] }
+                                   .sum { |a| a[:value] }
+
       can_retire = portfolio_value >= required_portfolio_value
 
       projections << {
         month: month + 1,
-        date: calculation_date + (month + 1).months,
+        date: projection_date,
         portfolio_value: portfolio_value,
-        investment_return: investment_return,
+        investment_return: total_return,
         contribution: contribution,
+        cashout_injection: cashout_injection,
         can_retire: can_retire
       }
     end
@@ -277,6 +383,36 @@ class RetirementScenario < ApplicationRecord
     projections = generate_projections(months: 480)  # Search up to 40 years
     retirement_projection = projections.find { |p| p[:can_retire] }
     retirement_projection ? retirement_projection[:date] : nil
+  end
+
+  # Apply explored retirement dates (from the interactive explorer)
+  def apply_exploration!(params)
+    params = params.to_h.with_indifferent_access
+
+    transaction do
+      if params[:salary_end_date].present?
+        self.salary_end_date = Date.parse(params[:salary_end_date])
+      end
+
+      if params[:gesetzliche_rente_start_date].present?
+        self.gesetzliche_rente_start_date = Date.parse(params[:gesetzliche_rente_start_date])
+      end
+
+      params[:person_retirement_dates]&.each do |rsp_id, date_str|
+        next if date_str.blank?
+        rsp = retirement_scenario_persons.find(rsp_id)
+        new_date = Date.parse(date_str)
+        rsp.update!(salary_end_date: new_date, target_retirement_date: new_date)
+      end
+
+      params[:pension_payout_dates]&.each do |ps_id, date_str|
+        next if date_str.blank?
+        ps = pension_sources.find(ps_id)
+        ps.update!(payout_start_date: Date.parse(date_str))
+      end
+
+      save! # Triggers calculate_retirement_metrics via before_save
+    end
   end
 
   # Trigger recalculation (when family data changes)
@@ -450,8 +586,13 @@ class RetirementScenario < ApplicationRecord
   def income_milestones
     milestones = []
 
-    # Salary end
-    if salary_end_date.present?
+    # Include per-person milestones for personal/joint scenarios
+    if retirement_scenario_persons.any? && !household?
+      milestones.concat(person_income_milestones)
+    end
+
+    # Salary end (legacy/household)
+    if salary_end_date.present? && (household? || retirement_scenario_persons.empty?)
       milestones << {
         date: salary_end_date,
         type: :salary_end,
@@ -553,6 +694,71 @@ class RetirementScenario < ApplicationRecord
   end
 
   # ========================================
+  # Person-Scoped Methods
+  # ========================================
+
+  # Portfolio value scoped by scenario type
+  def scoped_portfolio_value
+    case scenario_type
+    when "household"
+      family.balance_sheet.net_worth
+    when "personal"
+      return family.balance_sheet.net_worth unless person.present?
+      family.accounts.active.for_person(person).sum(:balance)
+    when "joint"
+      person_ids = retirement_scenario_persons.pluck(:person_id)
+      return family.balance_sheet.net_worth if person_ids.empty?
+      family.accounts.active
+        .left_joins(:account_persons)
+        .where(
+          "accounts.ownership_type = ? OR account_persons.person_id IN (?)",
+          Account.ownership_types[:household], person_ids
+        )
+        .distinct
+        .sum(:balance)
+    else
+      family.balance_sheet.net_worth
+    end
+  end
+
+  # Scoped accounts for projections
+  def scoped_accounts
+    case scenario_type
+    when "personal"
+      person.present? ? family.accounts.active.for_person(person) : family.accounts.active
+    when "joint"
+      person_ids = retirement_scenario_persons.pluck(:person_id)
+      if person_ids.any?
+        family.accounts.active
+          .left_joins(:account_persons)
+          .where(
+            "accounts.ownership_type = ? OR account_persons.person_id IN (?)",
+            Account.ownership_types[:household], person_ids
+          )
+          .distinct
+      else
+        family.accounts.active
+      end
+    else
+      family.accounts.active
+    end
+  end
+
+  # Per-person income breakdown at a date (for joint/personal scenarios)
+  def person_income_at_date(date)
+    return {} unless retirement_scenario_persons.any?
+
+    retirement_scenario_persons.includes(:person).each_with_object({}) do |rsp, hash|
+      hash[rsp.person.display_name] = rsp.income_at_date(date)
+    end
+  end
+
+  # Combined income milestones from all persons (for joint scenarios)
+  def person_income_milestones
+    retirement_scenario_persons.includes(:person).flat_map(&:income_milestones).sort_by { |m| m[:date] }
+  end
+
+  # ========================================
   # Historical Snapshot Methods
   # ========================================
 
@@ -650,7 +856,266 @@ class RetirementScenario < ApplicationRecord
     }
   end
 
+  # ========================================
+  # Cash Flow & Obligations Methods
+  # ========================================
+
+  # Detect fixed monthly obligations from loan and bauspar accounts
+  def fixed_obligations
+    obligations = []
+
+    family.accounts.active.where(accountable_type: "Loan").find_each do |account|
+      loan = account.accountable
+      payment = numeric_value(loan.monthly_payment) if loan.respond_to?(:monthly_payment)
+      next unless payment&.positive?
+      obligations << {
+        name: account.name,
+        monthly_amount: payment,
+        end_date: loan.respond_to?(:maturity_date) ? loan.maturity_date : nil,
+        account_id: account.id,
+        type: :loan
+      }
+    end
+
+    family.accounts.active.where(accountable_type: "BausparContract").find_each do |account|
+      bauspar = account.accountable
+      contribution = numeric_value(bauspar.monthly_contribution)
+      next unless bauspar.phase == "saving" && contribution&.positive?
+      obligations << {
+        name: account.name,
+        monthly_amount: contribution,
+        end_date: bauspar.expected_allocation_date,
+        account_id: account.id,
+        type: :bauspar
+      }
+    end
+
+    # Note: PrivateLoans are money YOU lent out — the monthly_payment is income
+    # coming back to you, not an outgoing obligation. They are handled in
+    # incoming_loan_payments instead.
+
+    obligations
+  end
+
+  def total_fixed_obligations
+    fixed_obligations.sum { |o| o[:monthly_amount].to_f }
+  end
+
+  # Income from private loans you gave out (money coming back to you)
+  def incoming_loan_payments
+    payments = []
+
+    family.accounts.active.where(accountable_type: "PrivateLoan").find_each do |account|
+      loan = account.accountable
+      payment = numeric_value(loan.monthly_payment) if loan.respond_to?(:monthly_payment)
+      next unless payment&.positive?
+      payments << {
+        name: account.name,
+        monthly_amount: payment,
+        end_date: loan.respond_to?(:maturity_date) ? loan.maturity_date : nil,
+        account_id: account.id,
+        type: :private_loan_income
+      }
+    end
+
+    payments
+  end
+
+  def total_incoming_loan_payments
+    incoming_loan_payments.sum { |p| p[:monthly_amount].to_f }
+  end
+
+  # Build a structured cash flow breakdown for the current month
+  def cash_flow_snapshot
+    income = effective_monthly_income + total_incoming_loan_payments
+    obligations = total_fixed_obligations
+    living = effective_living_expenses
+
+    CashFlowSnapshot.new(
+      monthly_income: income,
+      fixed_obligations: obligations,
+      living_expenses: living,
+      obligation_details: fixed_obligations,
+      incoming_payments: incoming_loan_payments,
+      currency: family.currency
+    )
+  end
+
+  # After-tax monthly income: manual override or auto-calculated
+  # Always returns a plain numeric value (not Money)
+  def effective_monthly_income
+    return after_tax_monthly_income.to_f if after_tax_monthly_income.present? && after_tax_monthly_income.to_f > 0
+
+    # Try per-person salary sum
+    if retirement_scenario_persons.any?
+      person_income = retirement_scenario_persons.sum { |rsp| (rsp.current_annual_salary || 0).to_f / 12.0 }
+      return person_income if person_income > 0
+    end
+
+    # Fallback to household salary
+    return current_annual_salary.to_f / 12.0 if current_annual_salary.present? && current_annual_salary.to_f > 0
+
+    # Last resort: median income from transactions
+    val = family.income_statement.median_income rescue 0
+    val.is_a?(Money) ? val.amount.to_f : val.to_f
+  end
+
+  # Living expenses: manual override or auto-calculated (total expenses minus detected obligations)
+  # Always returns a plain numeric value (not Money)
+  def effective_living_expenses
+    return monthly_living_expenses.to_f if monthly_living_expenses.present? && monthly_living_expenses.to_f > 0
+
+    # Auto-calculate: median expenses minus detected fixed obligations
+    val = family.income_statement.median_expense rescue 0
+    total_expenses = val.is_a?(Money) ? val.amount.to_f : val.to_f
+    obligations = total_fixed_obligations.to_f
+    [ total_expenses - obligations, 0 ].max
+  end
+
+  # Monthly savings = income - obligations - living expenses
+  def effective_monthly_savings
+    cash_flow_snapshot.monthly_savings
+  end
+
+  # ========================================
+  # Milestone Methods
+  # ========================================
+
+  # Rebuild auto-detected milestones from account data
+  def build_auto_milestones
+    milestones.auto_detected.delete_all
+
+    # Loan payoff milestones
+    family.accounts.active.where(accountable_type: %w[Loan PrivateLoan]).find_each do |account|
+      loan = account.accountable
+      next unless loan.respond_to?(:maturity_date) && loan.maturity_date.present?
+      next unless loan.respond_to?(:monthly_payment) && loan.monthly_payment&.positive?
+
+      milestones.create!(
+        milestone_type: "debt_payoff",
+        date: loan.maturity_date,
+        label: "#{account.name} paid off",
+        amount: numeric_value(loan.monthly_payment),
+        account: account,
+        auto_detected: true
+      )
+    end
+
+    # Bauspar lifecycle milestones
+    family.accounts.active.where(accountable_type: "BausparContract").find_each do |account|
+      bauspar = account.accountable
+      next unless bauspar.phase == "saving" && bauspar.expected_allocation_date.present?
+
+      allocation_date = bauspar.expected_allocation_date
+
+      if bauspar.replaces_loan?
+        replaced_loan = bauspar.replaces_loan_account&.accountable
+        old_payment = numeric_value(replaced_loan&.monthly_payment) || 0
+        bauspar_contribution = numeric_value(bauspar.monthly_contribution) || 0
+        new_payment = bauspar.bauspar_loan_monthly_payment || 0
+
+        # At allocation: old loan ends + Bauspar savings end → Bauspar loan starts
+        # Cash flow change = old_loan_payment + bauspar_contribution - new_bauspar_loan_payment
+        freed = old_payment + bauspar_contribution - new_payment
+
+        milestones.create!(
+          milestone_type: "bauspar_phase_change",
+          date: allocation_date,
+          label: "#{account.name} replaces #{bauspar.replaces_loan_account.name}",
+          amount: freed.round(2),
+          account: account,
+          auto_detected: true
+        )
+      else
+        # Standalone Bauspar: savings phase ends, contribution freed
+        milestones.create!(
+          milestone_type: "bauspar_phase_change",
+          date: allocation_date,
+          label: "#{account.name} allocation",
+          amount: numeric_value(bauspar.monthly_contribution),
+          account: account,
+          auto_detected: true
+        )
+      end
+    end
+
+    # Loan fixed-rate period end milestones (Zinsbindung)
+    family.accounts.active.where(accountable_type: "Loan").find_each do |account|
+      loan = account.accountable
+      next unless loan.respond_to?(:fixed_rate_end_date) && loan.fixed_rate_end_date.present?
+      # Skip if this loan is being replaced by a Bauspar (already covered above)
+      next if family.accounts.active.where(accountable_type: "BausparContract")
+                .any? { |ba| ba.accountable.replaces_loan_account_id == account.id }
+
+      milestones.create!(
+        milestone_type: "custom",
+        date: loan.fixed_rate_end_date,
+        label: "#{account.name} fixed rate ends (Zinsbindung)",
+        amount: nil,
+        account: account,
+        auto_detected: true
+      )
+    end
+  end
+
+  # All milestones sorted chronologically (auto + user-added)
+  def all_milestones
+    milestones.chronological.to_a
+  end
+
+  # Future milestones only
+  def future_milestones
+    milestones.future.chronological.to_a
+  end
+
+  # Monthly savings at a future date considering milestones
+  def monthly_savings_at_date(date)
+    base = effective_monthly_savings
+
+    milestones.where("date <= ?", date).each do |milestone|
+      case milestone.milestone_type
+      when "debt_payoff", "bauspar_phase_change"
+        base += (milestone.amount || 0)  # freed payment
+      when "income_start"
+        base += (milestone.amount || 0)
+      when "income_stop"
+        base -= (milestone.amount || 0)
+      end
+    end
+
+    base
+  end
+
   private
+
+    def build_cashout_events(fallback_rate)
+      events = []
+
+      family.accounts.active.where(accountable_type: "Investment").includes(:accountable).each do |account|
+        inv = account.accountable
+        next unless inv.respond_to?(:allows_early_cashout?) && inv.allows_early_cashout?
+
+        cashout_date = inv.effective_cashout_date
+        next unless cashout_date.present? && cashout_date > Date.current
+
+        amount = inv.projected_cashout_amount(fallback_growth_rate: fallback_rate)
+        next unless amount > 0
+
+        events << {
+          date: cashout_date,
+          amount: amount,
+          account_name: account.name,
+          account_id: account.id
+        }
+      end
+
+      events
+    end
+
+    def numeric_value(val)
+      return nil if val.nil?
+      val.is_a?(Money) ? val.amount.to_f : val.to_f
+    end
 
     def months_since(date)
       today = Date.today

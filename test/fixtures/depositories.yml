@@ -1,2 +1,4 @@
-one: { }
+one: {}
 two: {}
+with_interest_rate:
+  interest_rate: 2.5

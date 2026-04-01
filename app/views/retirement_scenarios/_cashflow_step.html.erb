@@ -1,0 +1,200 @@
+<%# locals: (form:, scenario:, analysis:) %>
+
+<div class="mx-auto max-w-lg space-y-4">
+  <% if analysis.present? %>
+    <!-- Year Picker -->
+    <div class="flex items-center justify-between">
+      <span class="text-sm font-medium text-primary">Analysis Year</span>
+      <%= form.select :analysis_year,
+          analysis[:available_years].map { |y| [y.to_s, y] },
+          { selected: analysis[:year] },
+          { class: "text-sm border border-secondary rounded-lg px-3 py-1.5 bg-container text-primary",
+            data: { action: "change->retirement-wizard#reloadStep" } } %>
+    </div>
+
+    <!-- Annual Summary -->
+    <div class="bg-surface-inset rounded-lg p-4">
+      <h3 class="text-sm font-semibold text-secondary mb-3">Annual Summary (<%= analysis[:year] %>)</h3>
+      <div class="grid grid-cols-3 gap-4 text-center">
+        <div>
+          <div class="text-xs text-secondary">Income</div>
+          <div class="text-lg font-bold text-green-600"><%= format_money Money.new(analysis[:annual_income], Current.family.currency) %></div>
+        </div>
+        <div>
+          <div class="text-xs text-secondary">Expenses</div>
+          <div class="text-lg font-bold text-red-600"><%= format_money Money.new(analysis[:annual_expenses], Current.family.currency) %></div>
+        </div>
+        <div>
+          <div class="text-xs text-secondary">Net</div>
+          <% net = analysis[:net_annual] %>
+          <div class="text-lg font-bold <%= net >= 0 ? "text-green-600" : "text-red-600" %>">
+            <%= format_money Money.new(net, Current.family.currency) %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Uncategorized Warning -->
+    <% if analysis[:uncategorized_count] > 0 %>
+      <div class="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+        <div class="flex items-start gap-3">
+          <%= icon "alert-triangle", class: "w-5 h-5 text-yellow-600 shrink-0 mt-0.5" %>
+          <div class="flex-1">
+            <p class="text-sm font-medium text-yellow-800">
+              <%= analysis[:uncategorized_count] %> uncategorized transactions found
+            </p>
+            <p class="text-xs text-yellow-700 mt-1">
+              Run AI categorization to improve the accuracy of your cash flow analysis.
+            </p>
+            <%= link_to "Run AI Categorization",
+                categories_path(auto_categorize: true),
+                method: :post,
+                class: "inline-flex items-center gap-1 mt-2 px-3 py-1.5 text-xs font-medium bg-yellow-600 text-white rounded-lg hover:bg-yellow-700",
+                data: { turbo: false } %>
+          </div>
+        </div>
+      </div>
+
+      <div id="auto_categorize_progress">
+        <% progress = AiProcessable.progress_for(Current.family, "auto_categorize") rescue nil %>
+        <% if progress %>
+          <%= render "shared/ai_progress", job_type: "auto_categorize", progress: progress %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <!-- Recurring Payments Detection -->
+    <% recurring = analysis[:recurring_payments] %>
+    <% if recurring.any? %>
+      <%
+        linkable_accounts = Current.family.accounts.active
+          .where(accountable_type: %w[Loan BausparContract Investment Insurance PrivateLoan])
+          .order(:name)
+        account_options = [["Regular expense", "regular"]] +
+          linkable_accounts.map { |a| ["#{a.name} (#{a.accountable_type.underscore.humanize})", a.id] }
+
+        # Bucket 1: Auto-linked (has suggested account with high/medium confidence)
+        auto_linked = recurring.select { |p| p[:suggested_account_id].present? && p[:confidence].in?([:high, :medium]) }
+
+        # Bucket 2: Stable recurring (same amount, not auto-linked)
+        # Monthly: 10-14 occurrences, Quarterly: 3-5 occurrences with stable amount
+        stable_recurring = recurring.reject { |p| auto_linked.include?(p) }.select { |p| p[:stable] }
+
+        # Bucket 3: Everything else
+        other = recurring.reject { |p| auto_linked.include?(p) || stable_recurring.include?(p) }
+      %>
+
+      <div class="border-t border-secondary pt-4 space-y-4">
+        <div>
+          <h3 class="text-sm font-semibold text-primary mb-1">Detected Recurring Payments</h3>
+          <p class="text-xs text-secondary mb-3">
+            Link payments to your loan or investment accounts to separate them from living expenses.
+          </p>
+        </div>
+
+        <%# Bucket 1: Auto-linked %>
+        <% if auto_linked.any? %>
+          <details open class="group">
+            <summary class="flex items-center gap-2 cursor-pointer text-sm font-medium text-primary mb-2">
+              <%= icon "link", class: "w-4 h-4 text-green-600" %>
+              Auto-linked to accounts (<%= auto_linked.size %>)
+              <span class="text-xs text-secondary font-normal ml-auto mr-1"><%= format_money Money.new(auto_linked.sum { |p| p[:monthly_amount] }, Current.family.currency) %>/mo</span>
+              <%= icon "chevron-down", class: "w-4 h-4 text-secondary group-open:rotate-180 transition-transform" %>
+            </summary>
+            <div class="space-y-2 pl-6">
+              <% auto_linked.each do |payment| %>
+                <%= render "retirement_scenarios/recurring_payment_card",
+                    form: form, scenario: scenario, payment: payment,
+                    account_options: account_options, analysis_year: analysis[:year] %>
+              <% end %>
+            </div>
+          </details>
+        <% end %>
+
+        <%# Bucket 2: Stable recurring amounts %>
+        <% if stable_recurring.any? %>
+          <details open class="group">
+            <summary class="flex items-center gap-2 cursor-pointer text-sm font-medium text-primary mb-2">
+              <%= icon "repeat", class: "w-4 h-4 text-blue-600" %>
+              Stable recurring payments (<%= stable_recurring.size %>)
+              <span class="text-xs text-secondary font-normal">same amount each time</span>
+              <span class="text-xs text-secondary font-normal ml-auto mr-1"><%= format_money Money.new(stable_recurring.sum { |p| p[:monthly_amount] }, Current.family.currency) %>/mo</span>
+              <%= icon "chevron-down", class: "w-4 h-4 text-secondary group-open:rotate-180 transition-transform" %>
+            </summary>
+            <div class="space-y-2 pl-6">
+              <% stable_recurring.each do |payment| %>
+                <%= render "retirement_scenarios/recurring_payment_card",
+                    form: form, scenario: scenario, payment: payment,
+                    account_options: account_options, analysis_year: analysis[:year] %>
+              <% end %>
+            </div>
+          </details>
+        <% end %>
+
+        <%# Bucket 3: Other recurring %>
+        <% if other.any? %>
+          <details class="group">
+            <summary class="flex items-center gap-2 cursor-pointer text-sm font-medium text-primary mb-2">
+              <%= icon "list", class: "w-4 h-4 text-secondary" %>
+              Other recurring payments (<%= other.size %>)
+              <span class="text-xs text-secondary font-normal">varying amounts</span>
+              <span class="text-xs text-secondary font-normal ml-auto mr-1"><%= format_money Money.new(other.sum { |p| p[:monthly_amount] }, Current.family.currency) %>/mo</span>
+              <%= icon "chevron-down", class: "w-4 h-4 text-secondary group-open:rotate-180 transition-transform" %>
+            </summary>
+            <div class="space-y-2 pl-6">
+              <% other.each do |payment| %>
+                <%= render "retirement_scenarios/recurring_payment_card",
+                    form: form, scenario: scenario, payment: payment,
+                    account_options: account_options, analysis_year: analysis[:year] %>
+              <% end %>
+            </div>
+          </details>
+        <% end %>
+      </div>
+    <% end %>
+
+    <!-- Monthly Breakdown Summary -->
+    <div class="border-t border-secondary pt-4">
+      <h3 class="text-sm font-semibold text-primary mb-3">Monthly Breakdown</h3>
+      <div class="bg-surface-inset rounded-lg p-4 space-y-2">
+        <div class="flex justify-between text-sm">
+          <span class="text-secondary">Monthly income (detected)</span>
+          <span class="font-medium text-primary"><%= format_money Money.new(analysis[:monthly_income], Current.family.currency) %></span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-secondary">Monthly expenses (total)</span>
+          <span class="font-medium text-red-600">-<%= format_money Money.new(analysis[:monthly_expenses], Current.family.currency) %></span>
+        </div>
+        <div class="flex justify-between text-sm border-t border-secondary pt-2">
+          <span class="font-medium text-primary">Monthly net</span>
+          <% monthly_net = analysis[:monthly_income] - analysis[:monthly_expenses] %>
+          <span class="font-bold <%= monthly_net >= 0 ? "text-green-600" : "text-red-600" %>">
+            <%= format_money Money.new(monthly_net, Current.family.currency) %>
+          </span>
+        </div>
+      </div>
+      <p class="text-xs text-secondary mt-2">
+        After linking recurring payments to accounts above, the retirement planner will separate living expenses from loan/savings obligations.
+      </p>
+    </div>
+
+  <% else %>
+    <!-- No transaction data available -->
+    <div class="bg-surface-inset rounded-lg p-6 text-center">
+      <%= icon "file-x", class: "w-8 h-8 mx-auto mb-3 text-secondary opacity-50" %>
+      <p class="text-sm font-medium text-primary">No transaction data available</p>
+      <p class="text-xs text-secondary mt-1">
+        Import your bank transactions to automatically analyze your income and expenses. You can still set values manually in the next step.
+      </p>
+    </div>
+  <% end %>
+
+  <div class="pt-4">
+    <button type="button"
+            class="font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg w-full justify-center px-3 py-2 text-sm text-inverse bg-inverse hover:bg-inverse-hover"
+            data-action="click->retirement-wizard#nextStep"
+            data-wizard-next-step="income">
+      Continue
+    </button>
+  </div>
+</div>

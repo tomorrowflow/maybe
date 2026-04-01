@@ -1,0 +1,22 @@
+---
+de:
+  loans:
+    edit:
+      edit: "%{account} bearbeiten"
+    form:
+      interest_rate: Zinssatz
+      interest_rate_placeholder: '3.5'
+      rate_type: Zinsart
+      rate_type_prompt: Zinsart auswählen
+      subtype_prompt: Kreditart auswählen
+      term_months: Laufzeit (Monate)
+      term_months_placeholder: '360'
+    new:
+      title: Kreditdetails eingeben
+    overview:
+      interest_rate: Zinssatz
+      monthly_payment: Monatliche Rate
+      original_balance: Ursprünglicher Betrag
+      term_months: Laufzeit
+      type: Kreditart
+      unknown: Unbekannt

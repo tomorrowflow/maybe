@@ -1,0 +1,79 @@
+<div id="explore-portfolio-projection">
+  <% if scenario.portfolio_growth_rate.present? %>
+    <% projection_builder = RetirementScenario::PortfolioProjectionBuilder.new(scenario) %>
+    <% chart_data = projection_builder.build_chart_data %>
+
+    <% if chart_data[:metadata][:has_data] %>
+    <div class="bg-container rounded-xl p-6 shadow-border-xs">
+      <h2 class="text-lg font-semibold text-primary mb-4"><%= t("retirement_scenarios.show.portfolio_growth_projection") %></h2>
+
+      <!-- Summary Stats -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div>
+          <div class="text-sm text-secondary"><%= t("retirement_scenarios.show.starting_value") %></div>
+          <div class="text-lg font-bold text-primary"><%= format_money scenario.current_portfolio_value_money %></div>
+        </div>
+
+        <div>
+          <div class="text-sm text-secondary"><%= t("retirement_scenarios.show.contributions") %></div>
+          <div class="text-lg font-bold text-purple-600">
+            +<%= format_money Money.new(chart_data[:metadata][:total_contributions], scenario.family.currency) %>
+          </div>
+        </div>
+
+        <div>
+          <div class="text-sm text-secondary"><%= t("retirement_scenarios.show.investment_returns") %></div>
+          <div class="text-lg font-bold text-orange-600">
+            +<%= format_money Money.new(chart_data[:metadata][:total_returns], scenario.family.currency) %>
+          </div>
+        </div>
+
+        <div>
+          <div class="text-sm text-secondary"><%= t("retirement_scenarios.show.final_value") %></div>
+          <div class="text-lg font-bold text-primary">
+            <%= format_money Money.new(chart_data[:metadata][:final_value], scenario.family.currency) %>
+          </div>
+        </div>
+      </div>
+
+      <!-- Growth Rate Info -->
+      <div class="p-4 bg-surface-inset rounded-lg mb-4 text-sm">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <span class="text-secondary"><%= t("retirement_scenarios.show.nominal_return") %></span>
+            <span class="font-semibold text-primary"><%= format_percentage(scenario.portfolio_growth_rate, precision: 1) %></span>
+          </div>
+          <% if scenario.inflation_rate.present? %>
+            <div>
+              <span class="text-secondary"><%= t("retirement_scenarios.show.inflation") %></span>
+              <span class="font-semibold text-primary"><%= format_percentage(scenario.inflation_rate, precision: 1) %></span>
+            </div>
+            <div>
+              <span class="text-secondary"><%= t("retirement_scenarios.show.real_return") %></span>
+              <span class="font-semibold text-green-700"><%= format_percentage(scenario.real_portfolio_growth_rate, precision: 1) %></span>
+            </div>
+          <% end %>
+          <div>
+            <span class="text-secondary"><%= t("retirement_scenarios.form.monthly_contribution") %>:</span>
+            <span class="font-semibold text-primary"><%= format_money Money.new(chart_data[:metadata][:monthly_contribution], scenario.family.currency) %></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- D3 Portfolio Projection Chart -->
+      <div class="mb-4">
+        <h3 class="text-sm font-semibold text-secondary mb-3"><%= t("retirement_scenarios.show.portfolio_value_over_time") %></h3>
+        <div id="portfolio-projection-chart-<%= scenario.id %>" class="w-full h-80" data-controller="portfolio-projection-chart" data-portfolio-projection-chart-data-value="<%= chart_data.to_json %>"></div>
+      </div>
+
+      <!-- Projection Details -->
+      <div class="text-xs text-secondary text-center">
+        <%= t("retirement_scenarios.show.projection_over_years", years: chart_data[:metadata][:years]) %>
+        <% if chart_data[:metadata][:retirement_month] %>
+          · <%= t("retirement_scenarios.show.retirement_ready_in_years", years: (chart_data[:metadata][:retirement_month] / 12.0).round(1)) %>
+        <% end %>
+      </div>
+    </div>
+    <% end %>
+  <% end %>
+</div>

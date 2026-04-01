@@ -1,5 +1,6 @@
 class OtherLiability < ApplicationRecord
   include Accountable
+  include InterestProjectable
 
   class << self
     def color

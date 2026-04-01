@@ -16,6 +16,7 @@ class Family < ApplicationRecord
   ].freeze
 
   has_many :users, dependent: :destroy
+  has_many :persons, dependent: :destroy
   has_many :accounts, dependent: :destroy
   has_many :invitations, dependent: :destroy
 
@@ -41,6 +42,10 @@ class Family < ApplicationRecord
 
   validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }
   validates :date_format, inclusion: { in: DATE_FORMATS.map(&:last) }
+  validates :number_format, inclusion: { in: CountryDefaults::NUMBER_FORMATS }, allow_nil: true
+  validates :measurement_system, inclusion: { in: CountryDefaults::MEASUREMENT_SYSTEMS }, allow_nil: true
+
+  before_save :apply_country_defaults, if: :country_changed?
 
   def assigned_merchants
     merchant_ids = transactions.where.not(merchant_id: nil).pluck(:merchant_id).uniq
@@ -132,8 +137,36 @@ class Family < ApplicationRecord
     Rails.application.config.app_mode.self_hosted?
   end
 
+  def ensure_primary_person!(user)
+    persons.find_by(primary: true) || persons.create!(
+      first_name: user.first_name.presence || "Me",
+      last_name: user.last_name,
+      primary: true,
+      country: country
+    )
+  end
+
+  def default_area_unit
+    measurement_system == "imperial" ? "sqft" : "sqm"
+  end
+
+  def default_distance_unit
+    measurement_system == "imperial" ? "mi" : "km"
+  end
+
+  def currency_format
+    CountryDefaults.for(country)[:currency_format]
+  end
+
   private
     def bootstrap_default_categories
       categories.bootstrap!
+    end
+
+    def apply_country_defaults
+      defaults = CountryDefaults.for(country)
+      self.number_format = defaults[:number_format] unless number_format_changed?
+      self.date_format = defaults[:date_format] unless date_format_changed?
+      self.measurement_system = defaults[:measurement_system] unless measurement_system_changed?
     end
 end

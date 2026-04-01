@@ -9,4 +9,7 @@ class Setting < RailsSettings::Base
 
   field :require_invite_for_signup, type: :boolean, default: false
   field :require_email_confirmation, type: :boolean, default: ENV.fetch("REQUIRE_EMAIL_CONFIRMATION", "true") == "true"
+
+  field :eurostat_enabled, type: :boolean, default: ENV.fetch("EUROSTAT_ENABLED", "false") == "true"
+  field :eurostat_default_region, type: :string, default: ENV.fetch("EUROSTAT_DEFAULT_REGION", "EU")
 end

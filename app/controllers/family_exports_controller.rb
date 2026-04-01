@@ -9,7 +9,8 @@ class FamilyExportsController < ApplicationController
   end
 
   def create
-    @export = Current.family.family_exports.create!
+    export_type = params[:export_type] == "full_backup" ? "full_backup" : "csv"
+    @export = Current.family.family_exports.create!(export_type: export_type)
     FamilyDataExportJob.perform_later(@export)
 
     respond_to do |format|

@@ -4,7 +4,9 @@ class PropertiesController < ApplicationController
   before_action :set_property, only: [ :balances, :address, :update_balances, :update_address ]
 
   def new
-    @account = Current.family.accounts.build(accountable: Property.new)
+    @account = Current.family.accounts.build(
+      accountable: Property.new(area_unit: Current.family.default_area_unit)
+    )
   end
 
   def create
@@ -37,7 +39,16 @@ class PropertiesController < ApplicationController
   end
 
   def update_balances
-    result = @account.set_current_balance(balance_params[:balance].to_d)
+    balance = balance_params[:balance].to_d
+
+    # For draft properties with a purchase_date, set opening balance dated at purchase
+    if @account.draft? && @property.purchase_date.present?
+      manager = Account::OpeningBalanceManager.new(@account)
+      result = manager.set_opening_balance(balance: balance, date: @property.purchase_date)
+      @account.update!(balance: balance) if result.success?
+    else
+      result = @account.set_current_balance(balance)
+    end
 
     if result.success?
       @success_message = "Balance updated successfully."
@@ -48,7 +59,7 @@ class PropertiesController < ApplicationController
         redirect_to address_property_path(@account)
       end
     else
-      @error_message = result.error_message
+      @error_message = result.error || result.error_message
       render :balances, status: :unprocessable_entity
     end
   end
@@ -89,7 +100,7 @@ class PropertiesController < ApplicationController
 
     def property_params
       params.require(:account)
-            .permit(:name, :subtype, :accountable_type, accountable_attributes: [ :id, :year_built, :area_unit, :area_value ])
+            .permit(:name, :subtype, :accountable_type, accountable_attributes: [ :id, :year_built, :area_unit, :area_value, :purchase_date ])
     end
 
     def set_property

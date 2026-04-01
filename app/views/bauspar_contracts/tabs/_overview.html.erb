@@ -26,7 +26,7 @@
         <div>
           <div class="text-xs text-tertiary">Progress</div>
           <div class="text-lg font-semibold">
-            <%= number_to_percentage(bauspar.savings_progress_percent, precision: 1) %>
+            <%= format_percentage(bauspar.savings_progress_percent, precision: 1) %>
           </div>
         </div>
         <div>
@@ -38,7 +38,7 @@
         <div>
           <div class="text-xs text-tertiary">Remaining</div>
           <div class="text-lg font-semibold">
-            <%= format_money bauspar.available_loan_amount %>
+            <%= format_money bauspar.available_loan_amount_money %>
           </div>
         </div>
         <% if bauspar.monthly_contribution.present? %>
@@ -123,14 +123,14 @@
         <div>
           <div class="text-xs text-tertiary">Available Loan Amount</div>
           <div class="text-lg font-semibold">
-            <%= format_money bauspar.available_loan_amount %>
+            <%= format_money bauspar.available_loan_amount_money %>
           </div>
         </div>
         <% if bauspar.loan_interest_rate.present? %>
           <div>
             <div class="text-xs text-tertiary">Loan Interest Rate</div>
             <div class="text-lg font-semibold">
-              <%= number_to_percentage(bauspar.loan_interest_rate, precision: 3) %>
+              <%= format_percentage(bauspar.loan_interest_rate, precision: 3) %>
             </div>
           </div>
         <% end %>
@@ -188,13 +188,13 @@
     <div class="grid grid-cols-2 gap-2">
       <% if bauspar.savings_interest_rate.present? %>
         <%= summary_card title: "Savings Interest (Guthabenzins)" do %>
-          <%= number_to_percentage(bauspar.savings_interest_rate, precision: 3) %>
+          <%= format_percentage(bauspar.savings_interest_rate, precision: 3) %>
         <% end %>
       <% end %>
 
       <% if bauspar.loan_interest_rate.present? %>
         <%= summary_card title: "Loan Interest (Darlehenszins)" do %>
-          <%= number_to_percentage(bauspar.loan_interest_rate, precision: 3) %>
+          <%= format_percentage(bauspar.loan_interest_rate, precision: 3) %>
         <% end %>
       <% end %>
     </div>

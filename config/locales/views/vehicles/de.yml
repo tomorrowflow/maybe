@@ -1,0 +1,25 @@
+---
+de:
+  vehicles:
+    edit:
+      edit: "%{account} bearbeiten"
+    form:
+      make: Marke
+      make_placeholder: Volkswagen
+      mileage: Kilometerstand
+      mileage_placeholder: '45000'
+      mileage_unit: Einheit
+      model: Modell
+      model_placeholder: Golf
+      year: Baujahr
+      year_placeholder: '2022'
+    new:
+      title: Fahrzeugdetails eingeben
+    overview:
+      current_price: Aktueller Wert
+      make_model: Marke & Modell
+      mileage: Kilometerstand
+      purchase_price: Kaufpreis
+      trend: Entwicklung
+      unknown: Unbekannt
+      year: Baujahr

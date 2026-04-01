@@ -1,0 +1,13 @@
+---
+de:
+  depositories:
+    edit:
+      edit: "%{account} bearbeiten"
+    form:
+      subtype_prompt: Kontotyp auswählen
+    new:
+      title: Kontodetails eingeben
+    overview:
+      balance: Kontostand
+      type: Kontotyp
+      unknown: Unbekannt

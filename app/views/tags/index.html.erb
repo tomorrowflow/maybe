@@ -33,6 +33,8 @@
 
 </header>
 
+<%= render "shared/ai_progress", job_type: "auto_tag", progress: @auto_tag_progress %>
+
 <div class="bg-container rounded-xl shadow-border-xs p-4">
   <% if @tags.any? %>
     <div class="rounded-xl bg-container-inset space-y-1 p-1">

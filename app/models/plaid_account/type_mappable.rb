@@ -32,9 +32,9 @@ module PlaidAccount::TypeMappable
       subtype_mapping: {
         "checking" => "checking",
         "savings" => "savings",
-        "hsa" => "hsa",
-        "cd" => "cd",
-        "money market" => "money_market"
+        "hsa" => "savings",           # Map US HSA to Savings (European version)
+        "cd" => "fixed_deposit",      # Map US CD to Fixed Deposit
+        "money market" => "call_money" # Map US Money Market to Call Money
       }
     },
     credit: {
@@ -60,13 +60,13 @@ module PlaidAccount::TypeMappable
         "brokerage" => "brokerage",
         "pension" => "pension",
         "retirement" => "retirement",
-        "401k" => "401k",
-        "roth 401k" => "roth_401k",
-        "529" => "529_plan",
-        "hsa" => "hsa",
+        "401k" => "retirement",      # Map US 401k to generic Retirement (European version)
+        "roth 401k" => "retirement", # Map US Roth 401k to generic Retirement
+        "529" => "brokerage",        # Map US 529 to Brokerage
+        "hsa" => "brokerage",        # Map US HSA to Brokerage
         "mutual fund" => "mutual_fund",
-        "roth" => "roth_ira",
-        "ira" => "ira"
+        "roth" => "retirement",      # Map US Roth IRA to generic Retirement
+        "ira" => "retirement"        # Map US IRA to generic Retirement
       }
     },
     other: {

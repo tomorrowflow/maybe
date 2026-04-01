@@ -1,5 +1,6 @@
 class PrivateLoan < ApplicationRecord
   include Accountable
+  include InterestProjectable
 
   RATE_TYPES = %w[fixed variable].freeze
   REPAYMENT_TYPES = %w[annuity bullet interest_only custom].freeze
@@ -7,7 +8,6 @@ class PrivateLoan < ApplicationRecord
   validates :principal_amount, presence: true, numericality: { greater_than: 0 }
   validates :rate_type, inclusion: { in: RATE_TYPES }, allow_nil: true
   validates :repayment_type, inclusion: { in: REPAYMENT_TYPES }, allow_nil: true
-  validates :interest_rate, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :term_months, numericality: { greater_than: 0 }, allow_nil: true
 
   class << self

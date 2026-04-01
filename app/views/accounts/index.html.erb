@@ -1,6 +1,19 @@
 <header class="flex justify-between items-center text-primary font-medium">
   <h1 class="text-xl"><%= t(".accounts") %></h1>
   <div class="flex items-center gap-5">
+    <% if @persons.any? %>
+      <div class="flex items-center gap-2">
+        <%= form_with url: accounts_path, method: :get, data: { controller: "auto-submit-form" } do |f| %>
+          <%= f.select :person_id,
+              options_for_select(
+                [["Everyone", ""]] + @persons.map { |p| [p.display_name, p.id] },
+                @current_person&.id
+              ),
+              {},
+              { class: "text-sm rounded-lg border border-primary px-3 py-1.5", data: { auto_submit_form_target: "auto" } } %>
+        <% end %>
+      </div>
+    <% end %>
     <div class="flex items-center gap-2">
       <%= icon(
             "refresh-cw",

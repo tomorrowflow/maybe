@@ -1,0 +1,13 @@
+---
+de:
+  layouts:
+    auth:
+      existing_account: Bereits ein Konto?
+      no_account: Neu bei Maybe?
+      sign_in: Anmelden
+      sign_up: Konto erstellen
+      your_account: Ihr Konto
+    shared:
+      footer:
+        privacy_policy: Datenschutzrichtlinie
+        terms_of_service: Nutzungsbedingungen

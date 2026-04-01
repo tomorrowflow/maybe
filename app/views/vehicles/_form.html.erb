@@ -28,6 +28,11 @@
                               [["Miles", "mi"], ["Kilometers", "km"]],
                               { label: t("vehicles.form.mileage_unit") } %>
       </div>
+
+      <div class="flex items-center gap-2">
+        <%= vehicle_form.date_field :purchase_date,
+                                   label: "Purchase Date" %>
+      </div>
     <% end %>
   </div>
 <% end %>

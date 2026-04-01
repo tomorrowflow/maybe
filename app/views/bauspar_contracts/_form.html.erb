@@ -65,6 +65,27 @@
                                    helper_text: "Leave blank if not yet allocated" %>
       </div>
 
+      <%
+        loan_accounts = Current.family.accounts.active
+          .where(accountable_type: "Loan")
+          .order(:name)
+      %>
+      <% if loan_accounts.any? %>
+        <%= render "shared/ruler", classes: "my-4" %>
+        <h3 class="text-sm font-medium text-secondary mb-2">Loan Replacement</h3>
+
+        <div class="flex items-center gap-2">
+          <%= bauspar_form.select :replaces_loan_account_id,
+              loan_accounts.map { |a| [a.name, a.id] },
+              { label: "Replaces Loan at Allocation", include_blank: "None \u2014 standalone Bauspar" } %>
+        </div>
+        <p class="text-xs text-secondary mt-1 pl-1">
+          If this Bauspar will pay off an existing mortgage at allocation (Zuteilung),
+          select the loan. The retirement planner will model the transition: the old loan
+          ends and is replaced by the Bauspar loan at the guaranteed lower rate.
+        </p>
+      <% end %>
+
       <%= render "shared/ruler", classes: "my-4" %>
       <h3 class="text-sm font-medium text-secondary mb-2">Interest Rates</h3>
 

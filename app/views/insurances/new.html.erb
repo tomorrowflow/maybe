@@ -1,10 +1,14 @@
-<%# locals: (account:) %>
-
-<%= turbo_frame_tag dom_id(account, :modal) do %>
-  <%= modal do |m| %>
-    <% m.title { "New insurance" } %>
-    <% m.body do %>
-      <%= render "form", account: account, url: insurances_path %>
+<% if params[:step] == "method_select" %>
+  <%= render "accounts/new/method_selector",
+             path: new_insurance_path(return_to: params[:return_to]),
+             show_us_link: @show_us_link,
+             show_eu_link: @show_eu_link,
+             accountable_type: "Insurance" %>
+<% else %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: "New Insurance") %>
+    <% dialog.with_body do %>
+      <%= render "insurances/form", account: @account, url: insurances_path %>
     <% end %>
   <% end %>
 <% end %>

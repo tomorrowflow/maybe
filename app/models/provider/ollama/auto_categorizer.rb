@@ -57,9 +57,20 @@ class Provider::Ollama::AutoCategorizer
         Rules:
         - Return 1 result per transaction
         - Correlate each transaction by ID (transaction_id)
+        - Categorize by the PURPOSE of the spending (what was bought or paid for), not the payment method.
+          Categories like "Card Payment", "Direct Debit", "Bank Transfer", "Cash", "ATM" describe how the
+          user paid, not what they bought — only use these if no better purpose-based category exists.
+        - Transaction names often follow patterns like "Merchant.Name/City", "Merchant Name/Location", or
+          "Merchant.Name.Suffix/City". Focus on the merchant name portion for categorization.
+        - Recognize well-known merchants even when abbreviated (e.g. "EDEKA"/"Rewe" = groceries,
+          "Apple.Com.Bill" = subscriptions, "DHL" = shipping, energy companies = utilities,
+          "Claude.Ai", "Anthropic", "OpenAI", "Netflix", "Spotify" = subscriptions/streaming).
+        - When a transaction name is a person's name (first + last name), it is most likely a personal
+          transfer. Use "Transfer" if available, do NOT guess "Groceries" or "Salary" for person names.
+        - Fintech names like "Revolut", "Wise", "N26", "PayPal" indicate transfers/top-ups, not subscriptions.
         - Attempt to match the most specific category possible (subcategory over parent category)
         - Category and transaction classifications should match (if transaction is "expense", category must be "expense")
-        - If you don't know the category, return "null"
+        - If you genuinely cannot determine the spending purpose, return "null"
         - Favor "null" over false positives. Only match if 60%+ confident.
 
         Available categories:

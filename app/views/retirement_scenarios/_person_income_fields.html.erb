@@ -1,0 +1,49 @@
+<%# locals: (form:, rsp_form:, retirement_scenario_person:) %>
+<div class="bg-surface-inset rounded-lg p-4 space-y-4">
+  <div class="flex items-center gap-2">
+    <div class="w-8 h-8 bg-surface rounded-full flex items-center justify-center text-sm font-medium text-secondary">
+      <%= retirement_scenario_person.person.first_name[0] %>
+    </div>
+    <h4 class="font-medium text-primary"><%= retirement_scenario_person.person.display_name %></h4>
+  </div>
+
+  <%= rsp_form.hidden_field :person_id %>
+
+  <div class="grid grid-cols-2 gap-4">
+    <%= rsp_form.number_field :current_annual_salary,
+                              label: "Annual salary (after tax)",
+                              placeholder: "45000",
+                              min: 0,
+                              step: 100 %>
+
+    <%= rsp_form.date_field :salary_end_date,
+                            label: "Last day of salary" %>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4">
+    <%= rsp_form.date_field :target_retirement_date,
+                            label: "Target retirement date" %>
+
+    <%= rsp_form.number_field :retirement_age,
+                              label: "Retirement age",
+                              min: 1,
+                              max: 100 %>
+  </div>
+
+  <div class="border-t border-secondary pt-3">
+    <p class="text-xs font-medium text-secondary mb-2">Post-Retirement Income (Part-Time Work)</p>
+    <div class="grid grid-cols-2 gap-4">
+      <%= rsp_form.number_field :post_retirement_income_monthly,
+                                label: "Monthly income",
+                                placeholder: "1000",
+                                min: 0,
+                                step: 50 %>
+      <%= rsp_form.date_field :post_retirement_income_start_date,
+                              label: "Start date" %>
+    </div>
+    <div class="mt-2">
+      <%= rsp_form.date_field :post_retirement_income_end_date,
+                              label: "End date (optional)" %>
+    </div>
+  </div>
+</div>

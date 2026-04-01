@@ -18,6 +18,12 @@
       </div>
 
       <div class="flex items-center gap-2">
+        <%= insurance_form.date_field :start_date,
+                                     label: "Policy Start Date",
+                                     helper_text: "When did the policy begin?" %>
+      </div>
+
+      <div class="flex items-center gap-2">
         <%= insurance_form.number_field :premium_amount,
                                        label: "Premium Amount",
                                        placeholder: "Monthly premium",

@@ -1,0 +1,41 @@
+<%
+  min_days = 0
+  max_days = (max_date - min_date).to_i
+  current_days = current_date.present? ? (current_date - min_date).to_i : (max_days / 2)
+  current_days = [[current_days, 0].max, max_days].min
+  slider_id = "explore-slider-#{param_name.parameterize}"
+  label_id = "explore-label-#{param_name.parameterize}"
+%>
+
+<div class="mb-3">
+  <div class="flex items-center justify-between mb-1">
+    <span class="text-sm font-medium text-primary"><%= label %></span>
+    <span id="<%= label_id %>" class="text-sm font-semibold text-primary"
+          data-retirement-explorer-target="dateLabel">
+      <%= current_date&.strftime("%B %Y") || "Not set" %>
+    </span>
+  </div>
+  <input type="range"
+         id="<%= slider_id %>"
+         min="<%= min_days %>"
+         max="<%= max_days %>"
+         value="<%= current_days %>"
+         step="30"
+         autocomplete="off"
+         data-retirement-explorer-target="slider"
+         data-param-name="<%= param_name %>"
+         data-epoch-date="<%= min_date.iso8601 %>"
+         data-label-target="<%= label_id %>"
+         data-action="input->retirement-explorer#sliderChanged"
+         class="w-full h-2 bg-alpha-black-100 rounded-full appearance-none cursor-pointer
+                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5
+                [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full
+                [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:cursor-pointer
+                [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5
+                [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-600
+                [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer">
+  <div class="flex justify-between text-xs text-secondary mt-1">
+    <span><%= min_date.strftime("%b %Y") %></span>
+    <span><%= max_date.strftime("%b %Y") %></span>
+  </div>
+</div>

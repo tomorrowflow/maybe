@@ -1,0 +1,27 @@
+---
+de:
+  onboardings:
+    header:
+      sign_out: Abmelden
+    preferences:
+      currency: Währung
+      date_format: Datumsformat
+      example: Beispielkonto
+      locale: Sprache
+      preview: Vorschau, wie Daten basierend auf Ihren Einstellungen angezeigt werden.
+      submit: Abschließen
+      subtitle: Lassen Sie uns Ihre Einstellungen konfigurieren.
+      title: Einstellungen konfigurieren
+    profile:
+      country: Land
+      first_name: Vorname
+      household_name: Haushaltsname
+      last_name: Nachname
+      profile_image: Profilbild
+      submit: Weiter
+      subtitle: Lassen Sie uns Ihr Profil vervollständigen.
+      title: Die Grundlagen einrichten
+    show:
+      message: Wir freuen uns sehr, dass Sie hier sind. Im nächsten Schritt stellen wir Ihnen einige Fragen, um Ihr Profil zu vervollständigen und Sie dann einzurichten.
+      setup: Konto einrichten
+      title: Willkommen bei Maybe

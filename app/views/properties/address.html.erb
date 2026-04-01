@@ -14,24 +14,24 @@
             <%= form.fields_for :address do |address_form| %>
               <%= address_form.text_field :line1,
                     label: "Address Line 1",
-                    placeholder: "123 Main Street" %>
+                    placeholder: "Sample Street 42" %>
 
               <div class="flex items-center gap-2">
                 <%= address_form.text_field :locality,
                       label: "City",
-                      placeholder: "San Francisco" %>
+                      placeholder: "Berlin" %>
                 <%= address_form.text_field :region,
                       label: "State/Region",
-                      placeholder: "CA" %>
+                      placeholder: "Berlin" %>
               </div>
 
               <div class="flex items-center gap-2">
                 <%= address_form.text_field :postal_code,
                       label: "Postal Code",
-                      placeholder: "12345" %>
+                      placeholder: "10115" %>
                 <%= address_form.text_field :country,
                       label: "Country",
-                      placeholder: "USA" %>
+                      placeholder: "Germany" %>
               </div>
             <% end %>
           </div>

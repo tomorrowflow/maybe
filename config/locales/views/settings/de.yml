@@ -1,0 +1,96 @@
+---
+de:
+  settings:
+    billings:
+      show:
+        page_title: Abrechnung
+        subscription_subtitle: Aktualisieren Sie Ihr Abonnement und Ihre Zahlungsdetails
+        subscription_title: Abonnement verwalten
+    preferences:
+      show:
+        country: Land
+        currency: Währung
+        date_format: Datumsformat
+        general_subtitle: Konfigurieren Sie Ihre Einstellungen
+        general_title: Allgemein
+        default_period: Standardzeitraum
+        language: Sprache
+        page_title: Einstellungen
+        theme_dark: Dunkel
+        theme_light: Hell
+        theme_subtitle: Wählen Sie ein bevorzugtes Design für die App
+        theme_system: System
+        theme_title: Design
+        timezone: Zeitzone
+        number_format: Zahlenformat
+        measurement_system: Maßsystem
+    profiles:
+      destroy:
+        cannot_remove_self: Sie können sich nicht selbst aus dem Konto entfernen.
+        member_removal_failed: Beim Entfernen des Mitglieds ist ein Problem aufgetreten.
+        member_removed: Mitglied wurde erfolgreich entfernt.
+        not_authorized: Sie sind nicht berechtigt, Mitglieder zu entfernen.
+      show:
+        confirm_delete:
+          body: Sind Sie sicher, dass Sie Ihr Konto dauerhaft löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.
+          title: Konto löschen?
+        confirm_reset:
+          body: Sind Sie sicher, dass Sie Ihr Konto zurücksetzen möchten? Dies löscht alle Ihre Konten, Kategorien, Händler, Tags und andere Daten. Diese Aktion kann nicht rückgängig gemacht werden.
+          title: Konto zurücksetzen?
+        confirm_remove_invitation:
+          body: Sind Sie sicher, dass Sie die Einladung für %{email} entfernen möchten?
+          title: Einladung entfernen
+        confirm_remove_member:
+          body: Sind Sie sicher, dass Sie %{name} aus Ihrem Konto entfernen möchten?
+          title: Mitglied entfernen
+        danger_zone_title: Gefahrenbereich
+        delete_account: Konto löschen
+        delete_account_warning: Das Löschen Ihres Kontos entfernt dauerhaft alle Ihre Daten und kann nicht rückgängig gemacht werden.
+        reset_account: Konto zurücksetzen
+        reset_account_warning: Das Zurücksetzen Ihres Kontos löscht alle Ihre Konten, Kategorien, Händler, Tags und andere Daten, behält aber Ihr Benutzerkonto bei.
+        email: E-Mail
+        first_name: Vorname
+        household_form_input_placeholder: Haushaltsname eingeben
+        household_form_label: Haushaltsname
+        household_subtitle: Laden Sie Familienmitglieder, Partner und andere Personen ein. Eingeladene können sich in Ihrem Haushalt anmelden und auf Ihre gemeinsamen Konten zugreifen.
+        household_title: Haushalt
+        invitation_link: Einladungslink
+        invite_member: Mitglied hinzufügen
+        last_name: Nachname
+        page_title: Konto
+        pending: Ausstehend
+        profile_subtitle: Passen Sie an, wie Sie bei Maybe erscheinen
+        profile_title: Profil
+        remove_invitation: Einladung entfernen
+        remove_member: Mitglied entfernen
+        save: Speichern
+    securities:
+      show:
+        page_title: Sicherheit
+    settings_nav:
+      accounts_label: Konten
+      api_key_label: API-Schlüssel
+      billing_label: Abrechnung
+      categories_label: Kategorien
+      feedback_label: Feedback
+      general_section_title: Allgemein
+      imports_label: Importe
+      logout: Abmelden
+      merchants_label: Händler
+      other_section_title: Mehr
+      preferences_label: Einstellungen
+      profile_label: Konto
+      rules_label: Regeln
+      security_label: Sicherheit
+      self_hosting_label: Self-Hosting
+      tags_label: Tags
+      transactions_section_title: Transaktionen
+      whats_new_label: Neuigkeiten
+    settings_nav_link_large:
+      next: Weiter
+      previous: Zurück
+    user_avatar_field:
+      accepted_formats: JPG oder PNG. Maximal 5MB.
+      choose: Foto hochladen
+      choose_label: (optional)
+      change: Foto ändern

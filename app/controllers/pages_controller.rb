@@ -4,8 +4,19 @@ class PagesController < ApplicationController
   skip_authentication only: :redis_configuration_error
 
   def dashboard
-    @balance_sheet = Current.family.balance_sheet
+    @current_person = Current.person
+    @balance_sheet = if @current_person
+      BalanceSheet.new(Current.family, person: @current_person)
+    else
+      Current.family.balance_sheet
+    end
     @accounts = Current.family.accounts.visible.with_attached_logo
+
+    if @current_person
+      @accounts = @accounts.for_person(@current_person)
+    end
+
+    @persons = Current.family.persons.ordered
 
     period_param = params[:cashflow_period]
     @cashflow_period = if period_param.present?

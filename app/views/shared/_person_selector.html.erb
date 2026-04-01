@@ -1,0 +1,18 @@
+<%# locals: (persons:, current_person: nil) %>
+<% if persons.any? && persons.size > 1 %>
+  <div class="flex items-center">
+    <%= form_with url: current_session_path, method: :patch, data: { controller: "auto-submit-form" } do |f| %>
+      <% if current_person.present? %>
+        <%= f.hidden_field :clear_person, value: "" %>
+      <% end %>
+      <%= f.select :person_id,
+          options_for_select(
+            [["Everyone", ""]] + persons.map { |p| [p.display_name, p.id] },
+            current_person&.id
+          ),
+          {},
+          { class: "text-sm rounded-lg border border-primary bg-container px-3 py-1.5 text-primary",
+            data: { auto_submit_form_target: "auto" } } %>
+    <% end %>
+  </div>
+<% end %>

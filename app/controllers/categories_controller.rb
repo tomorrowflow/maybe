@@ -5,6 +5,7 @@ class CategoriesController < ApplicationController
 
   def index
     @categories = Current.family.categories.alphabetically
+    @auto_categorize_progress = AiProcessable.progress_for(Current.family, "auto_categorize")
 
     render layout: "settings"
   end
@@ -71,9 +72,12 @@ class CategoriesController < ApplicationController
     uncategorized = Current.family.transactions.where(category_id: nil)
 
     if uncategorized.none?
-      # Unlock all transactions to allow re-categorization
-      Current.family.transactions.update_all(locked_attributes: {})
+      # No uncategorized transactions — clear all categories and unlock for full re-categorization
+      Current.family.transactions.update_all(locked_attributes: {}, category_id: nil)
       uncategorized = Current.family.transactions
+    else
+      # Unlock the uncategorized transactions so the AI can retry them
+      uncategorized.update_all("locked_attributes = locked_attributes - 'category_id'")
     end
 
     if uncategorized.any?

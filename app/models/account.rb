@@ -6,6 +6,9 @@ class Account < ApplicationRecord
   belongs_to :family
   belongs_to :import, optional: true
 
+  has_many :account_persons, dependent: :destroy
+  has_many :persons, through: :account_persons
+
   has_many :import_mappings, as: :mappable, dependent: :destroy, class_name: "Import::Mapping"
   has_many :entries, dependent: :destroy
   has_many :transactions, through: :entries, source: :entryable, source_type: "Transaction"
@@ -13,16 +16,29 @@ class Account < ApplicationRecord
   has_many :trades, through: :entries, source: :entryable, source_type: "Trade"
   has_many :holdings, dependent: :destroy
   has_many :balances, dependent: :destroy
+  has_many :retirement_scenario_pension_sources, class_name: "RetirementScenarioPensionSource", dependent: :destroy
 
   monetize :balance, :cash_balance
 
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
+  enum :ownership_type, { personal: "personal", joint: "joint", household: "household" }, default: :household
 
   scope :visible, -> { where(status: [ "draft", "active" ]) }
   scope :assets, -> { where(classification: "asset") }
   scope :liabilities, -> { where(classification: "liability") }
   scope :alphabetically, -> { order(:name) }
   scope :manual, -> { where(plaid_account_id: nil) }
+
+  # Returns accounts visible to a specific person:
+  # their personal accounts + joint accounts they're part of + all household accounts
+  scope :for_person, ->(person) {
+    left_joins(:account_persons)
+      .where(
+        "accounts.ownership_type = ? OR account_persons.person_id = ?",
+        ownership_types[:household], person.id
+      )
+      .distinct
+  }
 
   has_one_attached :logo
 
@@ -152,12 +168,53 @@ class Account < ApplicationRecord
     case accountable_type
     when "Depository", "CreditCard"
       :cash
-    when "Property", "Vehicle", "OtherAsset", "Loan", "OtherLiability"
+    when "Property", "Vehicle", "OtherAsset", "Loan", "OtherLiability", "PrivateLoan", "BausparContract", "Insurance"
       :non_cash
     when "Investment", "Crypto"
       :investment
     else
       raise "Unknown account type: #{accountable_type}"
+    end
+  end
+
+  # Returns projected annual growth rate for this account (as percentage, e.g., 7.0 for 7%)
+  # Used by retirement projections to calculate account-specific growth
+  def projected_growth_rate(fallback_rate: nil)
+    rate = case accountable_type
+    when "BausparContract"
+      accountable.savings_interest_rate
+    when "Depository"
+      accountable.interest_rate
+    when "Investment", "Crypto", "OtherAsset"
+      accountable.respond_to?(:expected_growth_rate) ? accountable.expected_growth_rate : nil
+    when "Property"
+      accountable.regional_growth_rate  # Try Eurostat HPI, falls back to nil
+    when "Vehicle"
+      nil  # No appreciation assumption for vehicles
+    when "Loan", "CreditCard", "OtherLiability", "PrivateLoan"
+      accountable.respond_to?(:interest_rate) ? accountable.interest_rate : nil
+    else
+      nil
+    end
+    rate || fallback_rate
+  end
+
+  # Returns the start/acquisition date for this account
+  # Used for historical projections and interest calculations
+  def account_start_date
+    case accountable_type
+    when "PrivateLoan", "Loan", "OtherLiability", "Insurance"
+      accountable.respond_to?(:start_date) ? accountable.start_date : nil
+    when "Depository", "Investment", "CreditCard"
+      accountable.respond_to?(:opening_date) ? accountable.opening_date : nil
+    when "Property", "Vehicle"
+      accountable.respond_to?(:purchase_date) ? accountable.purchase_date : nil
+    when "OtherAsset", "Crypto"
+      accountable.respond_to?(:acquisition_date) ? accountable.acquisition_date : nil
+    when "BausparContract"
+      accountable.contract_start_date
+    else
+      nil
     end
   end
 end

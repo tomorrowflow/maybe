@@ -1,9 +1,10 @@
 <%# locals: (current_step:) %>
 
 <% steps = [
-  { key: "basics", name: "Basics", step_number: 1 },
-  { key: "income", name: "Income", step_number: 2 },
-  { key: "portfolio", name: "Portfolio", step_number: 3 }
+  { key: "basics", name: t("retirement_scenarios.wizard_nav.basics"), step_number: 1 },
+  { key: "cashflow", name: "Cash Flow", step_number: 2 },
+  { key: "income", name: t("retirement_scenarios.wizard_nav.income"), step_number: 3 },
+  { key: "portfolio", name: t("retirement_scenarios.wizard_nav.portfolio"), step_number: 4 }
 ] %>
 
 <% step_keys = steps.map { |s| s[:key] }

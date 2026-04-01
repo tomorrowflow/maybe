@@ -2,6 +2,7 @@ class User < ApplicationRecord
   has_secure_password
 
   belongs_to :family
+  belongs_to :person, optional: true
   belongs_to :last_viewed_chat, class_name: "Chat", optional: true
   has_many :sessions, dependent: :destroy
   has_many :chats, dependent: :destroy
@@ -161,6 +162,14 @@ class User < ApplicationRecord
 
   def needs_onboarding?
     !onboarded?
+  end
+
+  def ensure_person!
+    return person if person.present?
+
+    p = family.ensure_primary_person!(self)
+    update_column(:person_id, p.id)
+    self.person = p
   end
 
   private

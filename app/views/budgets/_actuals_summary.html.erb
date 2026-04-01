@@ -21,7 +21,7 @@
             <div class="flex items-center gap-1.5">
               <div class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: <%= category_total.category.color %>"></div>
               <span class="text-secondary"><%= category_total.category.name %></span>
-              <span class="text-primary"><%= number_to_percentage(category_total.weight, precision: 0) %></span>
+              <span class="text-primary"><%= format_percentage(category_total.weight, precision: 0) %></span>
             </div>
           <% end %>
         </div>
@@ -47,7 +47,7 @@
             <div class="flex items-center gap-1.5">
               <div class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: <%= category_total.category.color %>"></div>
               <span class="text-secondary"><%= category_total.category.name %></span>
-              <span class="text-primary"><%= number_to_percentage(category_total.weight, precision: 0) %></span>
+              <span class="text-primary"><%= format_percentage(category_total.weight, precision: 0) %></span>
             </div>
           <% end %>
         </div>

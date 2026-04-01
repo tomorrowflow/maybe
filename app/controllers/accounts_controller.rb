@@ -3,8 +3,16 @@ class AccountsController < ApplicationController
   include Periodable
 
   def index
-    @manual_accounts = family.accounts.manual.alphabetically
+    accounts = family.accounts.manual.alphabetically
+
+    if params[:person_id].present?
+      @current_person = family.persons.find_by(id: params[:person_id])
+      accounts = accounts.for_person(@current_person) if @current_person
+    end
+
+    @manual_accounts = accounts
     @plaid_items = family.plaid_items.ordered
+    @persons = family.persons.ordered
 
     render layout: "settings"
   end

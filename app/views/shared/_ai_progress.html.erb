@@ -1,0 +1,75 @@
+<%# locals: (job_type:, progress:) %>
+
+<div id="<%= job_type %>_progress">
+  <% if progress.present? && progress["status"] == "processing" %>
+    <% processed = progress["processed"].to_i %>
+    <% total = progress["total"].to_i %>
+    <% rule_matched = progress["rule_matched"].to_i %>
+    <% ai_processed = progress["ai_processed"].to_i %>
+    <% percent = total > 0 ? ((processed.to_f / total) * 100).round : 0 %>
+    <% label = job_type == "auto_categorize" ? "Auto-categorizing" : "Auto-tagging" %>
+    <% started_at = progress["started_at"].present? ? Time.parse(progress["started_at"]) : nil %>
+    <% elapsed = started_at ? (Time.current - started_at).round : 0 %>
+
+    <div class="bg-container rounded-xl shadow-border-xs p-4 mb-4">
+      <div class="flex items-start gap-3">
+        <div class="shrink-0 mt-0.5">
+          <%= icon "sparkles", size: "md", class: "animate-pulse text-violet-500" %>
+        </div>
+
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-sm font-medium text-primary"><%= label %> transactions...</p>
+            <p class="text-xs text-secondary"><%= percent %>%</p>
+          </div>
+
+          <%# Progress bar %>
+          <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
+            <div class="h-full bg-violet-500 rounded-full transition-all duration-300" style="width: <%= percent %>%"></div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-secondary">
+            <span><%= processed %> of <%= total %> transactions processed</span>
+            <% if rule_matched > 0 %>
+              <span>Rule-matched: <%= rule_matched %></span>
+            <% end %>
+            <% if ai_processed > 0 %>
+              <span>AI-processed: <%= ai_processed %></span>
+            <% end %>
+            <% if elapsed > 0 %>
+              <span>Elapsed: <%= elapsed > 60 ? "#{elapsed / 60}m #{elapsed % 60}s" : "#{elapsed}s" %></span>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <% elsif progress.present? && progress["status"] == "complete" %>
+    <% total = progress["total"].to_i %>
+    <% rule_matched = progress["rule_matched"].to_i %>
+    <% ai_processed = progress["ai_processed"].to_i %>
+    <% label = job_type == "auto_categorize" ? "categorized" : "tagged" %>
+
+    <div class="bg-container rounded-xl shadow-border-xs p-4 mb-4"
+         data-controller="auto-dismiss"
+         data-auto-dismiss-delay-value="8000">
+      <div class="flex items-start gap-3">
+        <div class="shrink-0 mt-0.5">
+          <%= icon "check-circle", size: "md", class: "text-success" %>
+        </div>
+
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-primary">Done! <%= total %> transactions <%= label %>.</p>
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-secondary mt-1">
+            <% if rule_matched > 0 %>
+              <span>Rule-matched: <%= rule_matched %></span>
+            <% end %>
+            <% if ai_processed > 0 %>
+              <span>AI-processed: <%= ai_processed %></span>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>

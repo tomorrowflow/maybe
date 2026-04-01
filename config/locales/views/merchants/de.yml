@@ -1,0 +1,22 @@
+---
+de:
+  merchants:
+    create:
+      success: Händler erfolgreich erstellt
+    destroy:
+      success: Händler erfolgreich gelöscht
+    edit:
+      edit: Händler bearbeiten
+    form:
+      name_placeholder: Händlername
+    index:
+      empty: Keine Händler gefunden
+      merchants: Händler
+      new: Neuer Händler
+    merchant:
+      delete: Händler löschen
+      edit: Händler bearbeiten
+    new:
+      new_merchant: Neuer Händler
+    update:
+      success: Händler erfolgreich aktualisiert

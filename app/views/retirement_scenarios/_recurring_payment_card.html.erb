@@ -1,0 +1,44 @@
+<%# locals: (form:, scenario:, payment:, account_options:, analysis_year:) %>
+<div class="bg-surface-inset rounded-lg p-3">
+  <div class="flex items-center justify-between mb-2">
+    <div class="flex items-center gap-2 min-w-0">
+      <% if payment[:stable] %>
+        <%= icon "check-circle", class: "w-4 h-4 text-green-600 shrink-0" %>
+      <% else %>
+        <%= icon "circle", class: "w-4 h-4 text-secondary shrink-0" %>
+      <% end %>
+      <span class="text-sm font-medium text-primary truncate"><%= payment[:name] %></span>
+    </div>
+    <div class="text-right shrink-0 ml-2">
+      <span class="text-sm font-semibold text-primary"><%= format_money Money.new(payment[:monthly_amount], Current.family.currency) %>/mo</span>
+      <div class="text-xs text-secondary">
+        <%= payment[:occurrences] %>x/<%= analysis_year %> <%= payment[:stable] ? "stable" : "varies" %>
+        &middot; <%= format_money Money.new(payment[:monthly_amount] * payment[:occurrences], Current.family.currency) %> total
+      </div>
+    </div>
+  </div>
+
+  <div class="flex items-center gap-2">
+    <span class="text-xs text-secondary shrink-0">Link to:</span>
+    <%
+      preselected = if payment[:suggested_account_id] && payment[:confidence].in?([:high, :medium])
+        payment[:suggested_account_id]
+      else
+        "regular"
+      end
+    %>
+
+    <%= form.fields_for :linked_payments, scenario.linked_payments.find { |lp| lp.transaction_name == payment[:name] } || scenario.linked_payments.build(transaction_name: payment[:name], monthly_amount: payment[:monthly_amount]) do |lp_form| %>
+      <%= lp_form.hidden_field :transaction_name, value: payment[:name] %>
+      <%= lp_form.hidden_field :monthly_amount, value: payment[:monthly_amount] %>
+      <%= lp_form.select :account_id,
+          options_for_select(account_options, preselected),
+          {},
+          { class: "text-xs border border-secondary rounded-lg px-2 py-1 bg-container text-primary flex-1" } %>
+    <% end %>
+
+    <% if payment[:confidence] == :high %>
+      <span class="text-xs text-green-600 shrink-0">auto-matched</span>
+    <% end %>
+  </div>
+</div>

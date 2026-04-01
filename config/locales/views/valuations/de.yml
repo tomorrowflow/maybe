@@ -1,0 +1,16 @@
+---
+de:
+  valuations:
+    create:
+      success: Bewertung erfolgreich erstellt
+    destroy:
+      success: Bewertung erfolgreich gelöscht
+    form:
+      name_label: Name
+      name_placeholder: Name für diesen Eintrag eingeben
+      note_label: Notiz
+      note_placeholder: Zusätzliche Details zu diesem Eintrag hinzufügen
+    new:
+      title: Neue Bewertung
+    update:
+      success: Bewertung erfolgreich aktualisiert

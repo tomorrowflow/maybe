@@ -35,6 +35,16 @@
             { label: t(".country") },
             { data: { auto_submit_form_target: "auto" } } %>
 
+        <%= family_form.select :number_format,
+            Family::CountryDefaults::NUMBER_FORMATS.map { |f| [f, f] },
+            { label: t(".number_format") },
+            { data: { auto_submit_form_target: "auto" } } %>
+
+        <%= family_form.select :measurement_system,
+            [["Metric (m\u00B2, km)", "metric"], ["Imperial (sq ft, mi)", "imperial"]],
+            { label: t(".measurement_system") },
+            { data: { auto_submit_form_target: "auto" } } %>
+
         <p class="text-xs italic pl-2 text-secondary">Please note, we are still working on translations for various languages.  Please see the <%= link_to "I18n issue", "https://github.com/maybe-finance/maybe/issues/1225", target: "_blank", class: "underline" %> for more information.</p>
       <% end %>
     <% end %>

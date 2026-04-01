@@ -3,10 +3,11 @@ class BalanceSheet
 
   monetize :net_worth
 
-  attr_reader :family
+  attr_reader :family, :person
 
-  def initialize(family)
+  def initialize(family, person: nil)
     @family = family
+    @person = person
   end
 
   def assets
@@ -55,7 +56,7 @@ class BalanceSheet
     end
 
     def account_totals
-      @account_totals ||= AccountTotals.new(family, sync_status_monitor: sync_status_monitor)
+      @account_totals ||= AccountTotals.new(family, sync_status_monitor: sync_status_monitor, person: person)
     end
 
     def net_worth_series_builder

@@ -30,9 +30,9 @@
       <div class="space-y-2">
         <p class="text-sm text-secondary">
           <%= t(".api_calls_used",
-                used: number_with_delimiter(@synth_usage.data.used),
-                limit: number_with_delimiter(@synth_usage.data.limit),
-                percentage: number_to_percentage(@synth_usage.data.utilization, precision: 1)) %>
+                used: format_number(@synth_usage.data.used),
+                limit: format_number(@synth_usage.data.limit),
+                percentage: format_percentage(@synth_usage.data.utilization, precision: 1)) %>
         </p>
         <div class="w-52 h-1.5 bg-gray-100 rounded-2xl">
           <div class="h-full bg-green-500 rounded-2xl"

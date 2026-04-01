@@ -5,6 +5,8 @@ class Settings::ProfilesController < ApplicationController
     @user = Current.user
     @users = Current.family.users.order(:created_at)
     @pending_invitations = Current.family.invitations.pending
+    @persons = Current.family.persons.ordered
+    @new_person = Current.family.persons.build
   end
 
   def destroy

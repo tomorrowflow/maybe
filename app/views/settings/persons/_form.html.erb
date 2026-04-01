@@ -1,0 +1,51 @@
+<%# locals: (person:) %>
+<% url = person.persisted? ? settings_person_path(person) : settings_persons_path %>
+<% method = person.persisted? ? :patch : :post %>
+
+<%= styled_form_with model: person, url: url, method: method, class: "space-y-4" do |form| %>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <%= form.text_field :first_name, placeholder: "First name", label: "First name", required: true %>
+    <%= form.text_field :last_name, placeholder: "Last name", label: "Last name" %>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <%= form.date_field :date_of_birth, label: "Date of birth" %>
+    <%= form.number_field :retirement_age, label: "Retirement age", min: 1, max: 100 %>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <%= form.select :gender,
+        options_for_select([["Male", "male"], ["Female", "female"], ["Other", "other"]], person.gender),
+        { label: "Gender", include_blank: "Select gender" } %>
+    <%= form.select :country,
+        country_options,
+        { label: "Country", include_blank: "Select country" } %>
+  </div>
+
+  <% if person.persisted? %>
+    <% other_persons = Current.family.persons.where.not(id: person.id).ordered %>
+    <% if other_persons.any? %>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <%= form.select :joint_partner_id,
+            options_for_select(
+              other_persons.map { |p| [p.display_name, p.id] },
+              person.joint_partner_id
+            ),
+            { label: "Joint Partner", include_blank: "No joint partner" } %>
+        <div></div>
+      </div>
+    <% end %>
+  <% end %>
+
+  <div class="flex justify-end gap-2">
+    <% if person.persisted? && !person.primary? && Current.family.persons.count > 1 %>
+      <%= render DS::Button.new(
+        text: "Remove",
+        variant: "destructive",
+        href: new_settings_person_deletion_path(person),
+        data: { turbo_frame: :modal }
+      ) %>
+    <% end %>
+    <%= render DS::Button.new(text: person.persisted? ? "Update" : "Add person") %>
+  </div>
+<% end %>

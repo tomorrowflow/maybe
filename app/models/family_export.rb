@@ -10,10 +10,19 @@ class FamilyExport < ApplicationRecord
     failed: "failed"
   }, default: :pending, validate: true
 
+  enum :export_type, {
+    csv: "csv",
+    full_backup: "full_backup"
+  }, default: :csv
+
   scope :ordered, -> { order(created_at: :desc) }
 
   def filename
-    "maybe_export_#{created_at.strftime('%Y%m%d_%H%M%S')}.zip"
+    if full_backup?
+      "maybe_backup_#{created_at.strftime('%Y%m%d_%H%M%S')}.sql"
+    else
+      "maybe_export_#{created_at.strftime('%Y%m%d_%H%M%S')}.zip"
+    end
   end
 
   def downloadable?

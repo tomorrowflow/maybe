@@ -122,6 +122,57 @@
   </div>
 <% end %>
 
+<%= settings_section title: "Household Members", subtitle: "Manage the people in your household. These are used for account ownership and retirement planning." do %>
+  <div class="space-y-4">
+    <% @persons.each do |person| %>
+      <details class="bg-container-inset rounded-lg group">
+        <summary class="flex items-center gap-2 p-4 cursor-pointer list-none">
+          <div class="w-9 h-9 shrink-0 bg-surface-inset rounded-full flex items-center justify-center text-sm font-medium text-secondary uppercase">
+            <%= person.first_name[0] %><%= person.last_name&.first %>
+          </div>
+          <div class="flex-1">
+            <p class="text-primary font-medium text-sm"><%= person.display_name %></p>
+            <p class="text-secondary text-xs">
+              <% if person.age.present? %>
+                Age <%= person.age %>
+              <% end %>
+              <% if person.retirement_age.present? %>
+                &middot; Retirement age <%= person.retirement_age %>
+              <% end %>
+            </p>
+          </div>
+          <% if person.primary? %>
+            <div class="rounded-md bg-surface px-1.5 py-0.5">
+              <p class="uppercase text-secondary font-medium text-xs">Primary</p>
+            </div>
+          <% end %>
+          <% if person.user.present? %>
+            <div class="rounded-md bg-surface px-1.5 py-0.5">
+              <p class="uppercase text-secondary font-medium text-xs">App User</p>
+            </div>
+          <% end %>
+          <div class="text-secondary group-open:rotate-180 transition-transform">
+            <%= icon "chevron-down", size: "sm" %>
+          </div>
+        </summary>
+        <div class="px-4 pb-4">
+          <%= render "settings/persons/form", person: person %>
+        </div>
+      </details>
+    <% end %>
+
+    <details class="bg-container-inset rounded-lg group">
+      <summary class="flex items-center justify-center gap-2 text-secondary hover:bg-container-inset-hover rounded-lg px-4 py-2 cursor-pointer list-none">
+        <%= icon("plus") %>
+        Add household member
+      </summary>
+      <div class="px-4 pb-4 pt-2">
+        <%= render "settings/persons/form", person: @new_person %>
+      </div>
+    </details>
+  </div>
+<% end %>
+
 <% if Current.user.admin? %>
   <%= settings_section title: "Data Import/Export" do %>
     <div class="space-y-4">

@@ -107,11 +107,25 @@ class Provider::Openai::AutoCategorizer
 
         - Return 1 result per transaction
         - Correlate each transaction by ID (transaction_id)
+        - Categorize by the PURPOSE of the spending (what was bought or paid for), not the payment method.
+          Categories like "Card Payment", "Direct Debit", "Bank Transfer", "Cash", "ATM" describe how the
+          user paid, not what they bought — only use these if no better purpose-based category exists.
+        - Transaction names often follow patterns like "Merchant.Name/City", "Merchant Name/Location", or
+          "Merchant.Name.Suffix/City". Focus on the merchant name portion for categorization.
+        - Recognize well-known merchants and services even when abbreviated. For example:
+          "EDEKA", "Rewe", "Lidl", "Aldi" = groceries; "Apple.Com.Bill" = subscriptions/streaming;
+          "DHL", "Hermes", "DPD" = shipping/shopping; energy/utility companies = utilities;
+          "Netflix", "Spotify", "ChatGPT", "Claude.Ai", "Anthropic", "OpenAI" = subscriptions/streaming.
+        - When a transaction name is a person's name (first name + last name), it is most likely a
+          personal transfer between individuals. Categorize these as "Transfer" if available, otherwise "null".
+          Do NOT guess categories like "Groceries" or "Salary" for person names.
+        - Fintech and neobank names like "Revolut", "Wise", "N26", "PayPal" in transaction descriptions
+          indicate transfers or top-ups, not subscriptions. Use "Transfer" or "Topup" if available.
         - Attempt to match the most specific category possible (i.e. subcategory over parent category)
         - Category and transaction classifications should match (i.e. if transaction is an "expense", the category must have classification of "expense")
-        - If you don't know the category, return "null"
+        - If you genuinely cannot determine the spending purpose, return "null"
           - You should always favor "null" over false positives
-          - Be slightly pessimistic.  Only match a category if you're 60%+ confident it is the correct one.
+          - Only match a category if you're 60%+ confident it is the correct one.
         - Each transaction has varying metadata that can be used to determine the category
           - Note: "hint" comes from 3rd party aggregators and typically represents a category name that
             may or may not match any of the user-supplied categories

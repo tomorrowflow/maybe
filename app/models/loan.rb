@@ -1,12 +1,14 @@
 class Loan < ApplicationRecord
   include Accountable
+  include InterestProjectable
 
   SUBTYPES = {
     "mortgage" => { short: "Mortgage", long: "Mortgage" },
     "student" => { short: "Student", long: "Student Loan" },
     "auto" => { short: "Auto", long: "Auto Loan" },
-    "bauspardarlehen" => { short: "Bauspardarlehen", long: "Building Savings Loan (Bauspardarlehen)" },
+    "building_savings" => { short: "Building Savings", long: "Building Savings Loan" },
     "kfw" => { short: "KfW", long: "KfW Loan" },
+    "personal" => { short: "Personal", long: "Personal Loan" },
     "other" => { short: "Other", long: "Other Loan" }
   }.freeze
 
@@ -16,19 +18,24 @@ class Loan < ApplicationRecord
   validate :fixed_rate_end_date_in_future, if: :fixed_rate_end_date
 
   def monthly_payment
-    return nil if term_months.nil? || interest_rate.nil? || rate_type.nil? || rate_type != "fixed"
-    return Money.new(0, account.currency) if account.loan.original_balance.amount.zero? || term_months.zero?
+    return nil if interest_rate.nil? || rate_type.nil? || rate_type != "fixed"
+    return Money.new(0, account.currency) if account.loan.original_balance.amount.zero?
 
-    annual_rate = interest_rate / 100.0
-    monthly_rate = annual_rate / 12.0
-
-    if monthly_rate.zero?
-      payment = account.loan.original_balance.amount / term_months
+    if interest_only?
+      # Interest-only: pay only interest each month, principal stays unchanged
+      Money.new(monthly_interest_amount.round, account.currency)
     else
-      payment = (account.loan.original_balance.amount * monthly_rate * (1 + monthly_rate)**term_months) / ((1 + monthly_rate)**term_months - 1)
+      # Annuity: pay principal + interest (standard amortization)
+      return nil if term_months.nil? || term_months.zero?
+      Money.new(annuity_payment_amount.round, account.currency)
     end
+  end
 
-    Money.new(payment.round, account.currency)
+  # Monthly interest amount (used for interest-only loans and display)
+  def monthly_interest_amount
+    return 0 if interest_rate.nil? || interest_rate.zero?
+    annual_rate = interest_rate / 100.0
+    account.loan.original_balance.amount * (annual_rate / 12.0)
   end
 
   def original_balance
@@ -59,6 +66,17 @@ class Loan < ApplicationRecord
   end
 
   private
+
+    def annuity_payment_amount
+      annual_rate = interest_rate / 100.0
+      monthly_rate = annual_rate / 12.0
+
+      if monthly_rate.zero?
+        account.loan.original_balance.amount / term_months
+      else
+        (account.loan.original_balance.amount * monthly_rate * (1 + monthly_rate)**term_months) / ((1 + monthly_rate)**term_months - 1)
+      end
+    end
 
     def maturity_date_in_future
       errors.add(:maturity_date, "must be in the future") if maturity_date <= Date.today

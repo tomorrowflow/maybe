@@ -4,4 +4,15 @@
   <%= form.select :subtype,
                  Depository::SUBTYPES.map { |k, v| [v[:long], k] },
                  { label: true, prompt: t("depositories.form.subtype_prompt"), include_blank: t("depositories.form.none") } %>
+
+  <%= form.fields_for :accountable do |accountable_form| %>
+    <%= accountable_form.date_field :opening_date,
+                                    label: "Account Opening Date" %>
+
+    <%= accountable_form.number_field :interest_rate,
+                                      label: "Interest Rate (APY %)",
+                                      placeholder: "0.5",
+                                      min: 0, max: 100, step: 0.001,
+                                      helper_text: "Annual percentage yield used in retirement projections" %>
+  <% end %>
 <% end %>

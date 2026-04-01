@@ -1,24 +1,37 @@
 class Investment < ApplicationRecord
   include Accountable
 
+  validates :expected_growth_rate, numericality: { greater_than_or_equal_to: -50, less_than_or_equal_to: 100 }, allow_nil: true
+
   SUBTYPES = {
     "brokerage" => { short: "Brokerage", long: "Brokerage" },
     "pension" => { short: "Pension", long: "Pension" },
     "retirement" => { short: "Retirement", long: "Retirement" },
-    "401k" => { short: "401(k)", long: "401(k)" },
-    "roth_401k" => { short: "Roth 401(k)", long: "Roth 401(k)" },
-    "529_plan" => { short: "529 Plan", long: "529 Plan" },
-    "hsa" => { short: "HSA", long: "Health Savings Account" },
     "mutual_fund" => { short: "Mutual Fund", long: "Mutual Fund" },
-    "ira" => { short: "IRA", long: "Traditional IRA" },
-    "roth_ira" => { short: "Roth IRA", long: "Roth IRA" },
     "angel" => { short: "Angel", long: "Angel" },
+    # German pension products
     "riester" => { short: "Riester", long: "Riester Pension (Riester-Rente)" },
     "ruerup" => { short: "Rürup", long: "Rürup Pension (Basisrente)" },
-    "betriebsrente" => { short: "Betriebsrente", long: "Occupational Pension (Betriebliche Altersvorsorge)" }
+    "betriebsrente" => { short: "Betriebsrente", long: "Occupational Pension (Betriebliche Altersvorsorge)" },
+    "gesetzliche_rente" => { short: "Gesetzl. Rente", long: "Statutory Pension (Gesetzliche Rentenversicherung)" },
+    "versorgungswerk" => { short: "Versorgungswerk", long: "Professional Pension Fund (Berufsständisches Versorgungswerk)" },
+    "private_rentenversicherung" => { short: "Private Rente", long: "Private Pension Insurance (Private Rentenversicherung)" }
+    # US-specific pension products (commented out for European version)
+    # "401k" => { short: "401(k)", long: "401(k)" },
+    # "roth_401k" => { short: "Roth 401(k)", long: "Roth 401(k)" },
+    # "529_plan" => { short: "529 Plan", long: "529 Plan" },
+    # "hsa" => { short: "HSA", long: "Health Savings Account" },
+    # "ira" => { short: "IRA", long: "Traditional IRA" },
+    # "roth_ira" => { short: "Roth IRA", long: "Roth IRA" }
   }.freeze
 
-  GERMAN_PENSION_SUBTYPES = %w[riester ruerup betriebsrente].freeze
+  GERMAN_PENSION_SUBTYPES = %w[riester ruerup betriebsrente gesetzliche_rente versorgungswerk private_rentenversicherung].freeze
+
+  # Pension types that allow early cash-out with surrender value
+  CASHABLE_PENSION_SUBTYPES = %w[private_rentenversicherung].freeze
+
+  # Pension types that never allow lump-sum payout (monthly pension only)
+  PENSION_ONLY_SUBTYPES = %w[ruerup gesetzliche_rente versorgungswerk].freeze
 
   class << self
     def color
@@ -55,5 +68,63 @@ class Investment < ApplicationRecord
   def in_payout_phase?
     return false unless retirement_date
     Date.today >= retirement_date
+  end
+
+  # Check if this pension type allows early cash-out based on subtype
+  def allows_early_cashout?
+    return can_cash_out_early if can_cash_out_early.present?
+    account&.subtype.in?(CASHABLE_PENSION_SUBTYPES)
+  end
+
+  # Check if this pension type only pays out as monthly pension (no lump sum)
+  def pension_only_payout?
+    account&.subtype.in?(PENSION_ONLY_SUBTYPES)
+  end
+
+  # Surrender value as Money object
+  def surrender_value_money
+    return nil unless surrender_value && account&.currency
+    Money.new(surrender_value, account.currency)
+  end
+
+  # Effective current value - surrender value if cashable, otherwise balance
+  def effective_cash_value
+    if allows_early_cashout? && surrender_value.present?
+      surrender_value_money
+    else
+      account&.balance_money
+    end
+  end
+
+  # The date this pension will be cashed out (early or at retirement)
+  def effective_cashout_date
+    return nil unless allows_early_cashout?
+    early_cashout_date || retirement_date
+  end
+
+  # Projected value at a future date, using growth rate
+  def projected_value_at(date, fallback_growth_rate: 7.0)
+    return 0 unless account&.balance.present?
+
+    current = account.balance.to_f
+    return current if current <= 0
+
+    years = ((date - Date.current).to_f / 365.25)
+    return current if years <= 0
+
+    rate = (expected_growth_rate || fallback_growth_rate).to_f / 100.0
+    current * ((1 + rate) ** years)
+  end
+
+  # Projected cashout amount at the effective cashout date
+  def projected_cashout_amount(fallback_growth_rate: 7.0)
+    date = effective_cashout_date
+    return 0 unless date.present?
+
+    if has_surrender_value && surrender_value.present?
+      surrender_value.to_f
+    else
+      projected_value_at(date, fallback_growth_rate: fallback_growth_rate)
+    end
   end
 end

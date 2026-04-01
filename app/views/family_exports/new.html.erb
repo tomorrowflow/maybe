@@ -1,42 +1,57 @@
 <%= render DS::Dialog.new do |dialog| %>
-  <% dialog.with_header(title: "Export your data", subtitle: "Download all your financial data") %>
+  <% dialog.with_header(title: "Export your data", subtitle: "Download your financial data or create a full backup") %>
 
   <% dialog.with_body do %>
     <div class="space-y-4">
+      <!-- CSV Export Option -->
       <div class="bg-container-inset rounded-lg p-4 space-y-3">
-        <h3 class="font-medium text-primary">What's included:</h3>
-        <ul class="space-y-2 text-sm text-secondary">
+        <div class="flex items-center gap-2">
+          <%= icon "file-spreadsheet", class: "w-5 h-5 text-blue-600" %>
+          <h3 class="font-medium text-primary">CSV Export</h3>
+        </div>
+        <p class="text-sm text-secondary">
+          Export accounts, transactions, trades, and categories as CSV files. Useful for importing into other financial tools.
+        </p>
+        <ul class="space-y-1 text-sm text-secondary">
           <li class="flex items-start gap-2">
-            <%= icon "check", class: "shrink-0 mt-0.5 text-positive" %>
-            <span>All accounts and balances</span>
+            <%= icon "check", class: "shrink-0 mt-0.5 text-positive", size: "sm" %>
+            <span>Accounts, transactions, trades, categories</span>
           </li>
           <li class="flex items-start gap-2">
-            <%= icon "check", class: "shrink-0 mt-0.5 text-positive" %>
-            <span>Transaction history</span>
-          </li>
-          <li class="flex items-start gap-2">
-            <%= icon "check", class: "shrink-0 mt-0.5 text-positive" %>
-            <span>Investment trades</span>
-          </li>
-          <li class="flex items-start gap-2">
-            <%= icon "check", class: "shrink-0 mt-0.5 text-positive" %>
-            <span>Categories and tags</span>
+            <%= icon "x", class: "shrink-0 mt-0.5 text-destructive", size: "sm" %>
+            <span>Does not include retirement plans, rules, persons, or settings</span>
           </li>
         </ul>
+        <%= form_with url: family_exports_path, method: :post do |form| %>
+          <%= form.hidden_field :export_type, value: "csv" %>
+          <%= form.submit "Export CSV", class: "w-full mt-2 bg-inverse fg-inverse rounded-lg px-4 py-2 cursor-pointer text-sm" %>
+        <% end %>
       </div>
 
-      <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
-        <p class="text-sm text-amber-800">
-          <strong>Note:</strong> This export includes all of your data, but only some of the data can be imported back into Maybe via the CSV import feature. We support account, transaction (with category and tags), and trade imports. Other account data cannot be imported and is for your records only.
-        </p>
-      </div>
-
-      <%= form_with url: family_exports_path, method: :post, class: "space-y-4" do |form| %>
-        <div class="flex gap-3">
-          <%= link_to "Cancel", "#", class: "flex-1 text-center px-4 py-2 border border-primary rounded-lg hover:bg-surface-hover", data: { action: "click->modal#close" } %>
-          <%= form.submit "Export data", class: "flex-1 bg-inverse fg-inverse rounded-lg px-4 py-2 cursor-pointer" %>
+      <!-- Full Backup Option -->
+      <div class="bg-container-inset rounded-lg p-4 space-y-3">
+        <div class="flex items-center gap-2">
+          <%= icon "database", class: "w-5 h-5 text-green-600" %>
+          <h3 class="font-medium text-primary">Full Backup (Database)</h3>
         </div>
-      <% end %>
+        <p class="text-sm text-secondary">
+          Complete database dump for migrating to a different machine. Includes everything: accounts, retirement plans, persons, rules, settings, and all historical data.
+        </p>
+        <ul class="space-y-1 text-sm text-secondary">
+          <li class="flex items-start gap-2">
+            <%= icon "check", class: "shrink-0 mt-0.5 text-positive", size: "sm" %>
+            <span>Everything in your database</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <%= icon "info", class: "shrink-0 mt-0.5 text-secondary", size: "sm" %>
+            <span>Restore with: <code class="text-xs bg-surface px-1.5 py-0.5 rounded">pg_restore -d maybe_production backup.dump</code></span>
+          </li>
+        </ul>
+        <%= form_with url: family_exports_path, method: :post do |form| %>
+          <%= form.hidden_field :export_type, value: "full_backup" %>
+          <%= form.submit "Download Full Backup", class: "w-full mt-2 bg-green-600 text-white rounded-lg px-4 py-2 cursor-pointer text-sm hover:bg-green-700" %>
+        <% end %>
+      </div>
     </div>
   <% end %>
 <% end %>

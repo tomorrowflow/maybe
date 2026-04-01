@@ -11,7 +11,7 @@
     <div class="flex items-center gap-2">
       <span class="text-sm text-secondary">Current codes loaded:</span>
       <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= @mcc_codes_count.to_i > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' %>">
-        <%= number_with_delimiter(@mcc_codes_count) %>
+        <%= format_number(@mcc_codes_count) %>
       </span>
     </div>
   </div>

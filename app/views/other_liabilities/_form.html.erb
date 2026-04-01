@@ -1,3 +1,17 @@
 <%# locals: (account:, url:) %>
 
-<%= render "accounts/form", account: account, url: url %>
+<%= render "accounts/form", account: account, url: url do |form| %>
+  <%= form.fields_for :accountable do |accountable_form| %>
+    <div class="space-y-2 mt-4">
+      <%= accountable_form.date_field :start_date,
+                                      label: "Start Date",
+                                      helper_text: "When did this liability begin?" %>
+
+      <%= accountable_form.number_field :interest_rate,
+                                        label: "Interest Rate (%)",
+                                        placeholder: "0.0",
+                                        helper_text: "Annual interest rate if applicable",
+                                        min: 0, max: 100, step: 0.001 %>
+    </div>
+  <% end %>
+<% end %>

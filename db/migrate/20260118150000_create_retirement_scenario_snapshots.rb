@@ -1,7 +1,7 @@
 class CreateRetirementScenarioSnapshots < ActiveRecord::Migration[7.2]
   def change
     create_table :retirement_scenario_snapshots, id: :uuid do |t|
-      t.references :retirement_scenario, null: false, foreign_key: true, type: :uuid
+      t.references :retirement_scenario, null: false, foreign_key: { on_delete: :cascade }, type: :uuid
 
       # When the snapshot was taken
       t.date :snapshot_date, null: false

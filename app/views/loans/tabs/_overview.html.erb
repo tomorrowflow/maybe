@@ -11,9 +11,9 @@
 
   <%= summary_card title: t(".interest_rate") do %>
     <% if account.loan.sollzins.present? %>
-      <div><%= number_to_percentage(account.loan.sollzins, precision: 3) %></div>
+      <div><%= format_percentage(account.loan.sollzins, precision: 3) %></div>
       <% if account.loan.effektivzins.present? %>
-        <div class="text-xs text-gray-500">APR: <%= number_to_percentage(account.loan.effektivzins, precision: 3) %></div>
+        <div class="text-xs text-gray-500">APR: <%= format_percentage(account.loan.effektivzins, precision: 3) %></div>
       <% end %>
     <% else %>
       <%= t(".unknown") %>
@@ -63,7 +63,7 @@
 
   <% if account.loan.extra_payment_allowance_percent.present? %>
     <%= summary_card title: "Extra Payment Allowance" do %>
-      <%= number_to_percentage(account.loan.extra_payment_allowance_percent, precision: 2) %> per year
+      <%= format_percentage(account.loan.extra_payment_allowance_percent, precision: 2) %> per year
     <% end %>
   <% end %>
 </div>

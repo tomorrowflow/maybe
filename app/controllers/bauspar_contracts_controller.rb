@@ -21,6 +21,7 @@ class BausparContractsController < ApplicationController
     :arbeitnehmersparzulage_eligible,
     :wohn_riester_eligible,
     :vermoegenswirksame_leistungen,
-    :tariff_name
+    :tariff_name,
+    :replaces_loan_account_id
   )
 end

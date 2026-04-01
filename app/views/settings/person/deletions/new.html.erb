@@ -1,0 +1,32 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: "Remove #{@person.display_name}", subtitle: "This person's accounts will be transferred to the selected member. This action cannot be undone.") %>
+
+  <% dialog.with_body do %>
+    <%= styled_form_with url: settings_person_deletions_path(@person),
+                       data: {
+                         turbo: false,
+                         controller: "deletion",
+                         deletion_submit_text_when_not_replacing_value: "Remove and set accounts to household",
+                         deletion_submit_text_when_replacing_value: "Remove and transfer accounts" } do |f| %>
+      <%= f.collection_select :replacement_person_id,
+                            @replacement_persons,
+                            :id, :display_name,
+                            { prompt: "Transfer to household (no specific person)", label: "Transfer accounts to", container_class: "mb-4" },
+                            data: { deletion_target: "replacementField", action: "deletion#chooseSubmitButton" } %>
+
+      <%= render DS::Button.new(
+        variant: "destructive",
+        text: "Remove and set accounts to household",
+        full_width: true,
+        data: { deletion_target: "destructiveSubmitButton" }
+      ) %>
+
+      <%= render DS::Button.new(
+        text: "Remove and transfer accounts",
+        data: { deletion_target: "safeSubmitButton" },
+        hidden: true,
+        full_width: true
+      ) %>
+    <% end %>
+  <% end %>
+<% end %>

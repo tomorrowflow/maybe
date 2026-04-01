@@ -1,0 +1,2 @@
+# Account persons will be created on-the-fly in tests
+# since most existing accounts default to "household" with no person associations

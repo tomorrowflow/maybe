@@ -3,7 +3,7 @@ class Provider::Registry
 
   Error = Class.new(StandardError)
 
-  CONCEPTS = %i[exchange_rates securities llm]
+  CONCEPTS = %i[exchange_rates securities llm house_prices]
 
   validates :concept, inclusion: { in: CONCEPTS }
 
@@ -76,6 +76,30 @@ class Provider::Registry
 
         Provider::Ollama.new(host: host, model: model)
       end
+
+      def eurostat
+        enabled = ENV.fetch("EUROSTAT_ENABLED", Setting.eurostat_enabled.to_s)
+
+        return nil unless enabled.to_s == "true"
+
+        Provider::Eurostat.new
+      end
+
+      def bundesbank
+        enabled = ENV.fetch("EUROSTAT_ENABLED", Setting.eurostat_enabled.to_s)
+
+        return nil unless enabled.to_s == "true"
+
+        Provider::Bundesbank.new
+      end
+
+      def dashboard_deutschland
+        enabled = ENV.fetch("EUROSTAT_ENABLED", Setting.eurostat_enabled.to_s)
+
+        return nil unless enabled.to_s == "true"
+
+        Provider::DashboardDeutschland.new
+      end
   end
 
   def initialize(concept)
@@ -106,8 +130,10 @@ class Provider::Registry
         %i[synth]
       when :llm
         %i[openai ollama]
+      when :house_prices
+        %i[dashboard_deutschland bundesbank eurostat]
       else
-        %i[synth plaid_us plaid_eu github openai]
+        %i[synth plaid_us plaid_eu github openai eurostat]
       end
     end
 end

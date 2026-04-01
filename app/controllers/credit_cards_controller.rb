@@ -7,6 +7,7 @@ class CreditCardsController < ApplicationController
     :minimum_payment,
     :apr,
     :annual_fee,
-    :expiration_date
+    :expiration_date,
+    :opening_date
   )
 end

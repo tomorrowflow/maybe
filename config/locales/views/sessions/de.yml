@@ -1,0 +1,15 @@
+---
+de:
+  sessions:
+    create:
+      invalid_credentials: Ungültige E-Mail-Adresse oder Passwort.
+    destroy:
+      logout_successful: Sie haben sich erfolgreich abgemeldet.
+    new:
+      email: E-Mail-Adresse
+      email_placeholder: sie@beispiel.de
+      forgot_password: Passwort vergessen?
+      password: Passwort
+      submit: Anmelden
+      title: In Ihr Konto einloggen
+      password_placeholder: Passwort eingeben

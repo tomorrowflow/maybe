@@ -1,0 +1,50 @@
+<div class="space-y-4">
+  <div class="flex items-center justify-between">
+    <div class="space-y-1">
+      <p class="text-sm">Eurostat House Price Index</p>
+      <% if ENV["EUROSTAT_ENABLED"].present? %>
+        <p class="text-secondary text-sm">Configured via EUROSTAT_ENABLED environment variable.</p>
+      <% else %>
+        <p class="text-secondary text-sm">Enable automatic property appreciation rates based on Eurostat HPI data for European countries.</p>
+      <% end %>
+    </div>
+
+    <%= form_with url: settings_hosting_path,
+                  method: :patch,
+                  data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do |form| %>
+      <%= render DS::Toggle.new(
+            id: "setting_eurostat_enabled",
+            name: "setting[eurostat_enabled]",
+            checked: Setting.eurostat_enabled,
+            disabled: ENV["EUROSTAT_ENABLED"].present?,
+            data: { "auto-submit-form-target": "auto" }
+          ) %>
+    <% end %>
+  </div>
+
+  <% if Setting.eurostat_enabled %>
+    <div class="flex items-center justify-between">
+      <div class="space-y-1">
+        <p class="text-sm">Default Region</p>
+        <p class="text-secondary text-sm">Fallback region when property address is not available.</p>
+      </div>
+
+      <%= styled_form_with model: Setting.new,
+                           url: settings_hosting_path,
+                           method: :patch,
+                           data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do |form| %>
+        <%= form.select :eurostat_default_region,
+                        eurostat_region_options,
+                        { include_blank: false },
+                        class: "form-field__input min-w-40",
+                        disabled: ENV["EUROSTAT_DEFAULT_REGION"].present?,
+                        data: { "auto-submit-form-target": "auto" } %>
+      <% end %>
+    </div>
+
+    <div class="text-secondary text-xs">
+      <p class="font-medium mb-1">Supported countries:</p>
+      <p>Austria, Belgium, Bulgaria, Croatia, Cyprus, Czechia, Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Ireland, Italy, Latvia, Lithuania, Luxembourg, Malta, Netherlands, Norway, Poland, Portugal, Romania, Slovakia, Slovenia, Spain, Sweden, Switzerland, United Kingdom</p>
+    </div>
+  <% end %>
+</div>

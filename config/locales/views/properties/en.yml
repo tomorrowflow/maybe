@@ -5,22 +5,22 @@ en:
       edit: Edit %{account}
     form:
       address_line1: Street address
-      address_line1_placeholder: 123 Main St
+      address_line1_placeholder: Sample Street 42
       area: Living area
-      area_placeholder: '2000'
+      area_placeholder: '120'
       area_unit: Unit of measurement
       country: Country
-      country_placeholder: US
+      country_placeholder: Germany
       locality: City
-      locality_placeholder: San Francisco
+      locality_placeholder: Berlin
       none: None
       postal_code: ZIP/Postal code
-      postal_code_placeholder: '94105'
+      postal_code_placeholder: '10115'
       region: State/Province
-      region_placeholder: CA
+      region_placeholder: Berlin
       subtype_prompt: Select property type
       year_built: Year built
-      year_built_placeholder: '2000'
+      year_built_placeholder: '1990'
     new:
       title: Enter property details
     overview:

@@ -24,6 +24,14 @@ class Settings::HostingsController < ApplicationController
       Setting.synth_api_key = hosting_params[:synth_api_key]
     end
 
+    if hosting_params.key?(:eurostat_enabled)
+      Setting.eurostat_enabled = hosting_params[:eurostat_enabled]
+    end
+
+    if hosting_params.key?(:eurostat_default_region)
+      Setting.eurostat_default_region = hosting_params[:eurostat_default_region]
+    end
+
     redirect_to settings_hosting_path, notice: t(".success")
   rescue ActiveRecord::RecordInvalid => error
     flash.now[:alert] = t(".failure")
@@ -61,7 +69,7 @@ class Settings::HostingsController < ApplicationController
 
   private
     def hosting_params
-      params.require(:setting).permit(:require_invite_for_signup, :require_email_confirmation, :synth_api_key)
+      params.require(:setting).permit(:require_invite_for_signup, :require_email_confirmation, :synth_api_key, :eurostat_enabled, :eurostat_default_region)
     end
 
     def ensure_admin

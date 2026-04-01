@@ -1,0 +1,14 @@
+---
+de:
+  investments:
+    edit:
+      edit: "%{account} bearbeiten"
+    form:
+      subtype_prompt: Anlagetyp auswählen
+    new:
+      title: Anlagedetails eingeben
+    overview:
+      holdings: Bestände
+      total_value: Gesamtwert
+      type: Anlagetyp
+      unknown: Unbekannt

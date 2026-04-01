@@ -22,6 +22,8 @@ en:
         theme_system: System
         theme_title: Theme
         timezone: Timezone
+        number_format: Number format
+        measurement_system: Measurement system
     profiles:
       destroy:
         cannot_remove_self: You cannot remove yourself from the account.

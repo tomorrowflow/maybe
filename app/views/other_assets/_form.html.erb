@@ -1,3 +1,17 @@
 <%# locals: (account:, url:) %>
 
-<%= render "accounts/form", account: account, url: url %>
+<%= render "accounts/form", account: account, url: url do |form| %>
+  <%= form.fields_for :accountable do |accountable_form| %>
+    <div class="space-y-2 mt-4">
+      <%= accountable_form.date_field :acquisition_date,
+                                      label: "Acquisition Date",
+                                      helper_text: "When was this asset acquired?" %>
+
+      <%= accountable_form.number_field :expected_growth_rate,
+                                        label: "Expected Annual Growth Rate (%)",
+                                        placeholder: "0.0",
+                                        helper_text: "Expected annual appreciation for projections",
+                                        min: -50, max: 100, step: 0.1 %>
+    </div>
+  <% end %>
+<% end %>

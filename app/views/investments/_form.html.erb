@@ -1,21 +1,53 @@
 <%# locals: (account:, url:) %>
 
+<%
+  # Build person retirement dates for pre-filling
+  person_retirement_dates = Current.family.persons.each_with_object({}) do |person, hash|
+    if person.estimated_retirement_date.present?
+      hash[person.id.to_s] = person.estimated_retirement_date.iso8601
+    end
+  end
+
+  # Pre-fill retirement date from person if this is a personal account
+  prefilled_retirement_date = if account.accountable&.retirement_date.present?
+    account.accountable.retirement_date
+  elsif account.personal? && account.person_ids.any?
+    Current.family.persons.find_by(id: account.person_ids.first)&.estimated_retirement_date
+  end
+%>
+
 <%= render "accounts/form", account: account, url: url do |form| %>
-  <div data-controller="investment-form">
+  <div data-controller="investment-form"
+       data-investment-form-person-retirement-dates-value="<%= person_retirement_dates.to_json %>">
     <%= form.select :subtype,
                    Investment::SUBTYPES.map { |k, v| [v[:long], k] },
                    { label: true, prompt: t("investments.form.subtype_prompt"), include_blank: t("investments.form.none") },
                    { data: { action: "change->investment-form#togglePensionFields" } } %>
 
     <%= form.fields_for :accountable do |accountable_form| %>
+      <div class="mt-3">
+        <%= accountable_form.date_field :opening_date,
+                                        label: "Account Opening Date" %>
+      </div>
+
+      <div class="mt-3">
+        <%= accountable_form.number_field :expected_growth_rate,
+                                          label: "Expected Annual Growth Rate (%)",
+                                          placeholder: "7.0",
+                                          min: -50, max: 100, step: 0.1,
+                                          helper_text: "Assumed annual return used in retirement projections" %>
+      </div>
+
       <div id="pension-fields"
-           class="<%= 'hidden' unless account.subtype.in?(Investment::GERMAN_PENSION_SUBTYPES || []) %>"
+           class="<%= "hidden" unless account.subtype.in?(Investment::GERMAN_PENSION_SUBTYPES || []) %>"
            data-investment-form-target="pensionFields">
         <div class="border-t border-secondary pt-4 mt-4">
           <p class="text-sm font-medium text-primary mb-3">Pension Payout Details</p>
           <div class="grid grid-cols-2 gap-4">
             <%= accountable_form.date_field :retirement_date,
-                                            label: "Retirement Date" %>
+                                            label: "Retirement Date",
+                                            value: prefilled_retirement_date&.iso8601,
+                                            data: { investment_form_target: "retirementDate" } %>
 
             <%= accountable_form.number_field :expected_monthly_payout,
                                               label: "Expected Monthly Payout",
@@ -26,6 +58,59 @@
           <p class="text-xs text-secondary mt-2">
             These values will be used in retirement planning calculations.
           </p>
+        </div>
+
+        <div id="cashout-fields"
+             class="<%= "hidden" unless account.subtype.in?(Investment::CASHABLE_PENSION_SUBTYPES || []) %>"
+             data-investment-form-target="cashoutFields">
+          <div class="border-t border-secondary pt-4 mt-4">
+            <p class="text-sm font-medium text-primary mb-3">Early Withdrawal Options</p>
+
+            <div class="space-y-4">
+              <label class="flex items-start gap-3 cursor-pointer">
+                <%= accountable_form.check_box :can_cash_out_early,
+                                               label: false,
+                                               class: "checkbox checkbox--light mt-0.5 shrink-0",
+                                               checked: account.accountable&.can_cash_out_early || account.subtype.in?(Investment::CASHABLE_PENSION_SUBTYPES || []) %>
+                <div>
+                  <span class="text-sm text-primary">Can be cashed out early</span>
+                  <p class="text-xs text-tertiary mt-0.5">
+                    If enabled, this contract's value will be included as available capital in retirement projections.
+                  </p>
+                </div>
+              </label>
+
+              <%= accountable_form.date_field :early_cashout_date,
+                                              label: "Planned Early Cashout Date",
+                                              helper_text: "If you plan to cash this out before retirement, set the date. Used by the retirement planner to project when this capital becomes available." %>
+
+              <label class="flex items-start gap-3 cursor-pointer">
+                <%= accountable_form.check_box :has_surrender_value,
+                                               label: false,
+                                               class: "checkbox checkbox--light mt-0.5 shrink-0",
+                                               data: { action: "change->investment-form#toggleSurrenderValue" } %>
+                <div>
+                  <span class="text-sm text-primary">Has a current surrender value (Rückkaufswert)</span>
+                  <p class="text-xs text-tertiary mt-0.5">
+                    Check this if your provider has stated a guaranteed buyback value for early cancellation.
+                  </p>
+                </div>
+              </label>
+
+              <div id="surrender-value-field"
+                   class="<%= "hidden" unless account.accountable&.has_surrender_value %>"
+                   data-investment-form-target="surrenderValueField">
+                <%= accountable_form.number_field :surrender_value,
+                                                  label: "Current Surrender Value",
+                                                  placeholder: "10000",
+                                                  min: 0,
+                                                  step: 100 %>
+                <p class="text-xs text-secondary mt-1">
+                  The amount you would receive if you cancel the contract today.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     <% end %>

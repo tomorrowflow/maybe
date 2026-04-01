@@ -18,3 +18,9 @@ run_security_health_checks:
   class: "SecurityHealthCheckJob"
   queue: "scheduled"
   description: "Runs security health checks to detect issues with security data"
+
+refresh_property_growth_rates:
+  cron: "0 3 * * 0" # 3:00 AM every Sunday
+  class: "RefreshPropertyGrowthRatesJob"
+  queue: "scheduled"
+  description: "Refreshes property growth rates and HPI valuations from Eurostat/Bundesbank data (weekly, as HPI data is quarterly)"

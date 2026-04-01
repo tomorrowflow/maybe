@@ -1,0 +1,169 @@
+<%# locals: (form:, scenario:) %>
+<%
+  persons = Current.family.persons.ordered
+  has_persons = persons.any?
+  pension_sources_with_data = scenario.pension_sources.select { |ps| ps.account.present? }
+  has_state_pension = pension_sources_with_data.any? { |ps| ps.account.subtype.in?(%w[gesetzliche_rente versorgungswerk]) }
+%>
+
+<div class="mx-auto max-w-lg space-y-4">
+  <!-- Salary section -->
+  <% if scenario.retirement_scenario_persons.any? %>
+    <%# Per-person salary + retirement fields (for household, joint, and personal) %>
+    <div class="space-y-4">
+      <%= form.fields_for :retirement_scenario_persons do |rsp_form| %>
+        <%= render "retirement_scenarios/person_income_fields",
+                   form: form,
+                   rsp_form: rsp_form,
+                   retirement_scenario_person: rsp_form.object %>
+      <% end %>
+    </div>
+  <% else %>
+    <%# Fallback: no persons configured yet %>
+    <div class="grid grid-cols-2 gap-4">
+      <%= form.date_field :salary_end_date,
+                          label: t("retirement_scenarios.form.last_day_of_salary") %>
+
+      <%= form.number_field :current_annual_salary,
+                            label: "Annual Salary (after tax)",
+                            placeholder: "45000",
+                            min: 0,
+                            step: 100 %>
+    </div>
+  <% end %>
+
+  <!-- Fixed Obligations (auto-detected from accounts) -->
+  <% obligations = scenario.fixed_obligations rescue [] %>
+  <% if obligations.any? %>
+    <div class="border-t border-secondary pt-4">
+      <p class="text-sm font-medium text-primary mb-3">Fixed Monthly Obligations</p>
+      <div class="space-y-2">
+        <% obligations.each do |obligation| %>
+          <div class="flex items-center justify-between bg-surface-inset rounded-lg px-4 py-3">
+            <div class="flex items-center gap-2">
+              <% icon_name = obligation[:type] == :bauspar ? "piggy-bank" : "landmark" %>
+              <%= icon icon_name, size: "sm", class: "text-secondary" %>
+              <span class="text-sm text-primary"><%= obligation[:name] %></span>
+            </div>
+            <div class="text-right">
+              <span class="text-sm font-medium text-primary"><%= format_money Money.new(obligation[:monthly_amount], scenario.family.currency) %>/mo</span>
+              <% if obligation[:end_date].present? %>
+                <span class="text-xs text-secondary block">ends <%= obligation[:end_date].strftime("%b %Y") %></span>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+      <p class="text-xs text-secondary mt-2">Auto-detected from your loan and savings accounts. These are factored into your savings calculation.</p>
+    </div>
+  <% end %>
+
+  <!-- Pension Accounts (auto-pulled from investment accounts) -->
+  <div class="border-t border-secondary pt-4">
+    <p class="text-sm font-medium text-primary mb-3">Pension Accounts</p>
+
+    <% if pension_sources_with_data.any? %>
+      <div class="space-y-3">
+        <%= form.fields_for :pension_sources do |ps_form| %>
+          <% pension_source = ps_form.object %>
+          <% next unless pension_source.account.present? %>
+          <%= ps_form.hidden_field :id if pension_source.persisted? %>
+          <%= ps_form.hidden_field :account_id %>
+
+          <%# Find the person who owns this account %>
+          <% owner = pension_source.account.persons.first %>
+
+          <div class="bg-surface-inset rounded-lg p-4">
+            <div class="flex items-center justify-between mb-1">
+              <div class="flex items-center gap-3">
+                <%= icon "line-chart", class: "w-5 h-5 text-blue-600" %>
+                <div>
+                  <div class="font-medium text-primary text-sm"><%= pension_source.account.name %></div>
+                  <div class="text-xs text-secondary">
+                    <%= pension_source.account.long_subtype_label %>
+                    <% if owner %>
+                      <span class="text-xs text-blue-600">&middot; <%= owner.first_name %></span>
+                    <% elsif pension_source.account.household? %>
+                      <span class="text-xs text-secondary">&middot; Household</span>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-medium text-primary"><%= format_money pension_source.account.balance_money %></div>
+              </div>
+            </div>
+
+            <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span class="text-secondary">Monthly payout:</span>
+                <% payout = pension_source.expected_monthly_payout.presence || pension_source.account_expected_monthly_payout %>
+                <% if payout.present? && payout.to_f > 0 %>
+                  <span class="text-primary font-medium"><%= format_money Money.new(payout, scenario.family.currency) %></span>
+                <% else %>
+                  <span class="text-yellow-600">Not set</span>
+                <% end %>
+              </div>
+              <div>
+                <span class="text-secondary">Payout start:</span>
+                <% payout_date = pension_source.payout_start_date || pension_source.account_retirement_date %>
+                <% if payout_date.present? %>
+                  <span class="text-primary font-medium"><%= payout_date.strftime("%b %Y") %></span>
+                <% else %>
+                  <span class="text-yellow-600">Not set</span>
+                <% end %>
+              </div>
+            </div>
+
+            <%# Pass through values from account if not overridden %>
+            <%= ps_form.hidden_field :expected_monthly_payout,
+                value: pension_source.expected_monthly_payout.presence || pension_source.account_expected_monthly_payout %>
+            <%= ps_form.hidden_field :payout_start_date,
+                value: (pension_source.payout_start_date || pension_source.account_retirement_date)&.iso8601 %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% unless has_state_pension %>
+      <div class="<%= "mt-3" if pension_sources_with_data.any? %> p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+        <div class="flex items-start gap-3">
+          <%= icon "alert-triangle", class: "w-5 h-5 text-yellow-600 shrink-0 mt-0.5" %>
+          <div>
+            <p class="text-sm font-medium text-yellow-800">No state or professional pension found</p>
+            <p class="text-xs text-yellow-700 mt-1">
+              Add a <strong>Gesetzliche Rente</strong> or <strong>Versorgungswerk</strong> account in your investments to include your state/professional pension in retirement planning.
+            </p>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <% if pension_sources_with_data.empty? %>
+      <div class="bg-surface-inset rounded-lg p-4 text-center">
+        <p class="text-sm text-secondary mb-2"><%= t("retirement_scenarios.form.no_pension_accounts") %></p>
+        <p class="text-xs text-secondary">
+          <%= t("retirement_scenarios.form.add_pension_accounts_hint") %>
+        </p>
+      </div>
+    <% end %>
+
+    <% if pension_sources_with_data.any? %>
+      <div class="border border-tertiary rounded-lg p-3 mt-3 flex gap-3">
+        <%= icon "info", class: "w-4 h-4 text-secondary shrink-0 mt-0.5" %>
+        <p class="text-xs text-secondary">
+          Pension data is pulled from your investment accounts. To change payout amounts or dates, edit the account directly.
+        </p>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="pt-4">
+    <button type="button"
+            class="font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg w-full justify-center px-3 py-2 text-sm text-inverse bg-inverse hover:bg-inverse-hover"
+            data-action="click->retirement-wizard#nextStep"
+            data-wizard-next-step="portfolio">
+      <%= t("retirement_scenarios.form.continue") %>
+    </button>
+  </div>
+</div>

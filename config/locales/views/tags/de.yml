@@ -1,0 +1,22 @@
+---
+de:
+  tags:
+    create:
+      success: Tag erfolgreich erstellt
+    destroy:
+      success: Tag erfolgreich gelöscht
+    edit:
+      edit: Tag bearbeiten
+    form:
+      placeholder: Tag-Name
+    index:
+      empty: Keine Tags gefunden
+      new: Neuer Tag
+      tags: Tags
+    new:
+      new_tag: Neuer Tag
+    tag:
+      delete: Tag löschen
+      edit: Tag bearbeiten
+    update:
+      success: Tag erfolgreich aktualisiert
