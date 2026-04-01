@@ -102,9 +102,12 @@ Rails.application.routes.draw do
 
   resources :retirement_scenarios do
     member do
-      post :recalculate
+      post :simulate
       get :explore
       patch :apply_exploration
+      get :snapshots
+      get :income_timeline
+      get :portfolio
     end
   end
 

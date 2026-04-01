@@ -1,0 +1,120 @@
+<div class="space-y-6 max-w-5xl mx-auto">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-medium text-primary"><%= @scenario.name %></h1>
+    <%= render DS::Link.new(text: "Edit", icon: "pencil", variant: :outline, href: edit_retirement_scenario_path(@scenario)) %>
+  </div>
+
+  <!-- Page Navigation -->
+  <%= render "retirement_scenarios/page_nav", scenario: @scenario, active: :income_timeline %>
+
+  <% gap = @chart_data[:gap_period] %>
+  <% if gap %>
+    <!-- Gap Period Warning -->
+    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-start gap-3">
+      <%= icon("triangle-alert", size: "sm", class: "text-yellow-600 mt-0.5") %>
+      <div>
+        <p class="text-sm font-medium text-yellow-800">Income Gap Detected</p>
+        <p class="text-sm text-yellow-700">
+          You have a <%= gap[:months] %>-month gap between your salary ending and your first pension starting
+          (<%= gap[:start_date] %> to <%= gap[:end_date] %>).
+          Monthly shortfall: <%= format_money Money.new(gap[:monthly_shortfall], @scenario.family.currency) %>
+        </p>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Income Milestones -->
+  <% milestones = @chart_data[:milestones] %>
+  <% if milestones.any? %>
+    <section class="bg-container shadow-border-xs rounded-xl p-4 space-y-3">
+      <h2 class="text-lg font-medium text-primary">Key Milestones</h2>
+      <div class="flex flex-wrap gap-2">
+        <% milestones.each do |m| %>
+          <div class="bg-surface-inset rounded-lg px-3 py-2 text-sm">
+            <p class="font-medium text-primary"><%= m[:label] %></p>
+            <p class="text-xs text-secondary">
+              <%= m[:date] %>
+              <% if m[:amount] %>
+                &middot; <%= format_money Money.new(m[:amount], @scenario.family.currency) %>/mo
+              <% end %>
+            </p>
+          </div>
+        <% end %>
+      </div>
+    </section>
+  <% end %>
+
+  <!-- Per-Person Income (if multi-person) -->
+  <% if @scenario.retirement_scenario_persons.any? %>
+    <section class="bg-container shadow-border-xs rounded-xl p-4 space-y-4">
+      <h2 class="text-lg font-medium text-primary">Per-Person Income</h2>
+      <div class="grid grid-cols-1 md:grid-cols-<%= [@scenario.retirement_scenario_persons.size, 3].min %> gap-4">
+        <% @scenario.retirement_scenario_persons.includes(:person).each do |rsp| %>
+          <div class="bg-surface-inset rounded-lg p-4 space-y-2">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 bg-surface rounded-full flex items-center justify-center text-sm font-medium text-secondary">
+                <%= rsp.person.first_name[0] %>
+              </div>
+              <p class="font-medium text-primary text-sm"><%= rsp.person.display_name %></p>
+            </div>
+            <div class="space-y-1 text-sm">
+              <div class="flex justify-between">
+                <span class="text-secondary">Annual Salary</span>
+                <span class="text-primary"><%= rsp.current_annual_salary ? format_money(Money.new(rsp.current_annual_salary, @scenario.family.currency)) : "—" %></span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-secondary">Stops Working</span>
+                <span class="text-primary"><%= rsp.salary_end_date&.strftime("%b %Y") || "—" %></span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-secondary">State Pension</span>
+                <span class="text-primary"><%= rsp.state_pension_monthly ? "#{format_money(Money.new(rsp.state_pension_monthly, @scenario.family.currency))}/mo" : "—" %></span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-secondary">Pension Starts</span>
+                <span class="text-primary"><%= rsp.state_pension_start_date&.strftime("%b %Y") || "—" %></span>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </section>
+  <% end %>
+
+  <!-- Pension Sources -->
+  <% pension_sources = @scenario.pension_sources.with_payout.includes(:account) %>
+  <% if pension_sources.any? %>
+    <section class="bg-container shadow-border-xs rounded-xl p-4 space-y-3">
+      <h2 class="text-lg font-medium text-primary">Pension Accounts</h2>
+      <div class="space-y-2">
+        <% pension_sources.each do |ps| %>
+          <div class="flex items-center justify-between px-3 py-2 bg-surface-inset rounded-lg">
+            <div class="flex items-center gap-2">
+              <p class="text-sm font-medium text-primary"><%= ps.account.name %></p>
+              <span class="text-xs text-secondary uppercase"><%= ps.account.subtype %></span>
+            </div>
+            <div class="text-right text-sm">
+              <p class="font-medium text-primary"><%= format_money Money.new(ps.expected_monthly_payout || 0, @scenario.family.currency) %>/mo</p>
+              <p class="text-xs text-secondary">from <%= ps.payout_start_date&.strftime("%b %Y") || "TBD" %></p>
+            </div>
+          </div>
+        <% end %>
+      </div>
+      <div class="flex justify-between px-3 pt-2 border-t border-divider">
+        <p class="text-sm font-medium text-secondary">Total Pension Income</p>
+        <p class="text-sm font-bold text-primary"><%= format_money Money.new(@scenario.pension_sources_total, @scenario.family.currency) %>/mo</p>
+      </div>
+    </section>
+  <% end %>
+
+  <!-- Income Chart -->
+  <section class="bg-container shadow-border-xs rounded-xl p-4 space-y-3">
+    <h2 class="text-lg font-medium text-primary">Income Over Time</h2>
+    <div id="income-timeline-chart"
+         class="h-80 relative"
+         data-controller="income-timeline-chart"
+         data-income-timeline-chart-data-value="<%= @chart_data.to_json %>">
+    </div>
+  </section>
+</div>

@@ -1,0 +1,110 @@
+<%# locals: (scenario:) %>
+<section class="bg-container shadow-border-xs rounded-xl p-6 space-y-4">
+  <% if scenario.monte_carlo_running? || scenario.monte_carlo_pending? %>
+    <!-- Running state -->
+    <div class="flex flex-col items-center justify-center py-8 space-y-3">
+      <div class="animate-spin text-secondary">
+        <%= icon("loader-2", size: "md") %>
+      </div>
+      <p class="text-sm font-medium text-primary">Running Monte Carlo simulation...</p>
+      <p class="text-xs text-secondary"><%= scenario.simulation_count %> scenarios being calculated</p>
+    </div>
+
+  <% elsif scenario.monte_carlo_completed? && scenario.monte_carlo_success_rate.present? %>
+    <!-- Results -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="space-y-1">
+        <p class="text-sm font-medium text-secondary">Probability of Success</p>
+        <div class="flex items-baseline gap-2">
+          <%
+            rate = scenario.monte_carlo_success_rate.to_i
+            color_class = if rate >= 80
+              "text-green-600"
+            elsif rate >= 50
+              "text-yellow-600"
+            else
+              "text-red-600"
+            end
+          %>
+          <p class="text-4xl font-bold <%= color_class %>">~<%= rate %>%</p>
+          <p class="text-sm text-secondary">chance your money lasts until age <%= scenario.target_age %></p>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-1 text-sm text-secondary">
+        <div class="flex items-center gap-2">
+          <%= icon("bar-chart-3", size: "sm") %>
+          <span><%= scenario.monte_carlo_results.dig("simulation_count") || scenario.simulation_count %> simulations</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <%= icon("trending-up", size: "sm") %>
+          <span><%= scenario.portfolio_growth_rate %>% mean return, <%= scenario.portfolio_growth_std_dev %>% volatility</span>
+        </div>
+        <% if scenario.monte_carlo_ran_at.present? %>
+          <div class="flex items-center gap-2">
+            <%= icon("clock", size: "sm") %>
+            <span><%= time_ago_in_words(scenario.monte_carlo_ran_at) %> ago</span>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Progress bar visualization -->
+    <div class="w-full bg-surface-inset rounded-full h-3">
+      <div class="h-3 rounded-full transition-all duration-500 <%= rate >= 80 ? 'bg-green-500' : rate >= 50 ? 'bg-yellow-500' : 'bg-red-500' %>"
+           style="width: <%= [rate, 100].min %>%">
+      </div>
+    </div>
+
+    <% if rate < 80 %>
+      <p class="text-sm text-secondary">
+        <% if rate >= 50 %>
+          Consider increasing contributions or adjusting your retirement date to improve your odds.
+        <% else %>
+          Your current plan has a high probability of needing spending adjustments. Review your assumptions.
+        <% end %>
+      </p>
+    <% end %>
+
+    <!-- Confidence band chart placeholder -->
+    <% if scenario.monte_carlo_results.dig("percentiles").present? %>
+      <div class="border-t border-divider pt-4">
+        <p class="text-sm font-medium text-secondary mb-2">Portfolio Projection (Confidence Bands)</p>
+        <div class="h-64 bg-surface-inset rounded-lg flex items-center justify-center"
+             data-controller="monte-carlo-chart"
+             data-monte-carlo-chart-data-value="<%= scenario.monte_carlo_results.to_json %>">
+          <p class="text-xs text-subdued">Chart loading...</p>
+        </div>
+      </div>
+    <% end %>
+
+  <% elsif scenario.monte_carlo_failed? %>
+    <!-- Error state -->
+    <div class="flex items-center gap-3 py-4">
+      <div class="text-red-500">
+        <%= icon("triangle-alert", size: "md") %>
+      </div>
+      <div>
+        <p class="text-sm font-medium text-primary">Simulation failed</p>
+        <p class="text-xs text-secondary">Please try running the simulation again.</p>
+      </div>
+    </div>
+
+  <% else %>
+    <!-- No results yet -->
+    <div class="flex flex-col items-center justify-center py-8 space-y-3">
+      <div class="text-secondary">
+        <%= icon("calculator", size: "md") %>
+      </div>
+      <p class="text-sm font-medium text-primary">No simulation results yet</p>
+      <p class="text-xs text-secondary">Run a Monte Carlo simulation to see your retirement probability.</p>
+      <%= render DS::Button.new(
+        text: "Run Simulation",
+        icon: "play",
+        variant: :primary,
+        href: simulate_retirement_scenario_path(scenario),
+        method: :post
+      ) %>
+    </div>
+  <% end %>
+</section>

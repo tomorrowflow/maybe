@@ -94,65 +94,60 @@
         </div>
 
         <div class="mx-auto max-w-lg space-y-4">
-          <%= form.number_field :portfolio_withdrawal_rate,
-                                label: t("retirement_scenarios.form.safe_withdrawal_rate"),
-                                placeholder: "4.0",
-                                step: 0.1,
-                                min: 0.1,
-                                max: 10,
-                                required: true %>
+          <p class="text-sm font-medium text-primary mb-3">Monte Carlo Simulation Parameters</p>
 
-          <div class="border border-tertiary rounded-lg p-4 flex gap-3">
-            <%= icon "info", class: "w-5 h-5 text-secondary shrink-0 mt-0.5" %>
-            <div class="space-y-1 text-sm">
-              <h4 class="text-primary font-medium"><%= t("retirement_scenarios.form.withdrawal_rate_info_title") %></h4>
-              <p class="text-secondary">
-                <%= t("retirement_scenarios.form.withdrawal_rate_info_text") %>
-              </p>
-            </div>
+          <div class="grid grid-cols-2 gap-4">
+            <%= form.number_field :portfolio_growth_rate,
+                                  label: "Expected Annual Return (%)",
+                                  placeholder: "7.0",
+                                  step: 0.5,
+                                  min: -20,
+                                  max: 50 %>
+
+            <%= form.number_field :portfolio_growth_std_dev,
+                                  label: "Return Volatility (%)",
+                                  placeholder: "15.0",
+                                  step: 0.5,
+                                  min: 0,
+                                  max: 50 %>
           </div>
 
-          <div class="border-t border-secondary pt-4">
-            <p class="text-sm font-medium text-primary mb-3"><%= t("retirement_scenarios.form.growth_assumptions") %></p>
+          <div class="grid grid-cols-2 gap-4">
+            <%= form.number_field :inflation_rate,
+                                  label: "Expected Inflation (%)",
+                                  placeholder: "3.0",
+                                  step: 0.1,
+                                  min: 0,
+                                  max: 20 %>
 
-            <div class="grid grid-cols-2 gap-4">
-              <%= form.number_field :portfolio_growth_rate,
-                                    label: t("retirement_scenarios.form.expected_annual_return"),
-                                    placeholder: "7.0",
-                                    step: 0.1,
-                                    min: -20,
-                                    max: 50 %>
-
-              <%= form.number_field :inflation_rate,
-                                    label: t("retirement_scenarios.form.expected_inflation"),
-                                    placeholder: "3.0",
-                                    step: 0.1,
-                                    min: 0,
-                                    max: 20 %>
-            </div>
-
-            <div class="mt-4">
-              <%= form.number_field :monthly_contribution,
-                                    label: t("retirement_scenarios.form.monthly_contribution"),
-                                    placeholder: t("retirement_scenarios.form.monthly_contribution_placeholder"),
-                                    min: 0,
-                                    step: 10 %>
-              <p class="text-xs text-secondary mt-1"><%= t("retirement_scenarios.form.monthly_contribution_hint") %></p>
-            </div>
+            <%= form.number_field :target_age,
+                                  label: "Plan Through Age",
+                                  placeholder: "90",
+                                  step: 1,
+                                  min: 60,
+                                  max: 120 %>
           </div>
+
+          <%= form.number_field :monthly_contribution,
+                                label: "Monthly Contribution (optional)",
+                                placeholder: "Auto-calculated from savings",
+                                min: 0,
+                                step: 10 %>
+          <p class="text-xs text-secondary mt-1">Leave blank to auto-calculate from your monthly savings.</p>
 
           <div class="border border-blue-200 bg-blue-50 theme-dark:border-blue-800 theme-dark:bg-blue-900/20 rounded-lg p-4 flex gap-3">
-            <%= icon "trending-up", class: "w-5 h-5 text-blue-600 shrink-0 mt-0.5" %>
+            <%= icon "bar-chart-3", class: "w-5 h-5 text-blue-600 shrink-0 mt-0.5" %>
             <div class="space-y-1 text-sm">
-              <h4 class="text-primary font-medium"><%= t("retirement_scenarios.form.compound_growth_title") %></h4>
+              <h4 class="text-primary font-medium">Monte Carlo Simulation</h4>
               <p class="text-secondary">
-                <%= t("retirement_scenarios.form.compound_growth_text") %>
+                We run 1,000 randomized market scenarios to calculate the probability that your money
+                lasts through your target age. Higher volatility means more uncertainty in outcomes.
               </p>
             </div>
           </div>
 
           <div class="pt-4">
-            <%= form.submit t(".submit") %>
+            <%= form.submit "Save Changes" %>
           </div>
         </div>
       </div>

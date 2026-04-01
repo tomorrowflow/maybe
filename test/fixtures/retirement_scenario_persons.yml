@@ -1,1 +1,15 @@
-# Retirement scenario persons will be created on-the-fly in tests
+bob_in_joint:
+  retirement_scenario: joint_plan
+  person: bob_person
+  current_annual_salary: 72000
+  salary_end_date: <%= Date.today + 10.years %>
+  state_pension_start_date: <%= Date.today + 10.years + 1.month %>
+  state_pension_monthly: 1500
+
+sara_in_joint:
+  retirement_scenario: joint_plan
+  person: sara_person
+  current_annual_salary: 60000
+  salary_end_date: <%= Date.today + 13.years %>
+  state_pension_start_date: <%= Date.today + 13.years + 1.month %>
+  state_pension_monthly: 1200

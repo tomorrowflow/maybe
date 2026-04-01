@@ -3,43 +3,37 @@ basic:
   name: "My Retirement Plan"
   calculation_date: <%= Date.today %>
   retirement_monthly_expenses: 4000
-  portfolio_withdrawal_rate: 4.0
-  gesetzliche_rente_monthly: 1500
-  current_annual_salary: 72000
-  salary_end_date: <%= Date.today + 10.years %>
-  gesetzliche_rente_start_date: <%= Date.today + 10.years + 1.month %>
+  portfolio_growth_rate: 7.0
+  portfolio_growth_std_dev: 15.0
+  inflation_rate: 3.0
+  simulation_count: 1000
+  target_age: 90
+  scenario_type: household
+  is_primary: true
+  monte_carlo_status: pending
 
 conservative_plan:
   family: dylan_family
   name: "Conservative Plan"
   calculation_date: <%= Date.today %>
   retirement_monthly_expenses: 3500
-  portfolio_withdrawal_rate: 3.5
-  gesetzliche_rente_monthly: 1500
-  current_annual_salary: 60000
-  salary_end_date: <%= Date.today + 15.years %>
-  gesetzliche_rente_start_date: <%= Date.today + 15.years %>
+  portfolio_growth_rate: 5.0
+  portfolio_growth_std_dev: 10.0
+  inflation_rate: 3.0
+  simulation_count: 1000
+  target_age: 90
+  scenario_type: household
+  monte_carlo_status: pending
 
-with_gap:
+joint_plan:
   family: dylan_family
-  name: "Plan With Gap"
-  calculation_date: <%= Date.today %>
-  retirement_monthly_expenses: 4000
-  portfolio_withdrawal_rate: 4.0
-  gesetzliche_rente_monthly: 1500
-  current_annual_salary: 72000
-  salary_end_date: <%= Date.new(2040, 12, 31) %>
-  gesetzliche_rente_start_date: <%= Date.new(2042, 1, 1) %>
-
-optimistic_plan:
-  family: dylan_family
-  name: "Optimistic Plan"
+  name: "Joint Retirement Plan"
   calculation_date: <%= Date.today %>
   retirement_monthly_expenses: 5000
-  portfolio_withdrawal_rate: 5.0
-  gesetzliche_rente_monthly: 1500
-  other_pension_monthly: 500
-  current_annual_salary: 84000
-  salary_end_date: <%= Date.today + 8.years %>
-  gesetzliche_rente_start_date: <%= Date.today + 8.years %>
-  other_pension_start_date: <%= Date.today + 8.years %>
+  portfolio_growth_rate: 7.0
+  portfolio_growth_std_dev: 15.0
+  inflation_rate: 3.0
+  simulation_count: 1000
+  target_age: 90
+  scenario_type: joint
+  monte_carlo_status: pending

@@ -1,0 +1,99 @@
+<div class="space-y-6 max-w-5xl mx-auto">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-medium text-primary"><%= @scenario.name %></h1>
+    <%= render DS::Button.new(
+      text: "Take Snapshot",
+      icon: "camera",
+      variant: :primary,
+      href: simulate_retirement_scenario_path(@scenario),
+      method: :post
+    ) %>
+  </div>
+
+  <!-- Page Navigation -->
+  <%= render "retirement_scenarios/page_nav", scenario: @scenario, active: :snapshots %>
+
+  <% if @snapshots.any? %>
+    <!-- Latest Status -->
+    <section class="bg-container shadow-border-xs rounded-xl p-4">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+          <p class="text-xs text-secondary">Status</p>
+          <%
+            status = @snapshots.first.tracking_status
+            status_color = case status
+              when :on_track then "text-green-600"
+              when :needs_attention then "text-yellow-600"
+              when :at_risk then "text-red-600"
+              else "text-secondary"
+            end
+          %>
+          <p class="text-lg font-medium <%= status_color %>"><%= @snapshots.first.tracking_status_label %></p>
+        </div>
+        <div>
+          <p class="text-xs text-secondary">Current Success Rate</p>
+          <p class="text-lg font-medium text-primary"><%= @snapshots.first.monte_carlo_success_rate ? "~#{@snapshots.first.monte_carlo_success_rate.to_i}%" : "—" %></p>
+        </div>
+        <div>
+          <p class="text-xs text-secondary">Portfolio Variance</p>
+          <% variance = @snapshots.first.portfolio_variance_percent %>
+          <p class="text-lg font-medium <%= variance && variance > 0 ? 'text-green-600' : variance && variance < 0 ? 'text-red-600' : 'text-primary' %>">
+            <%= variance ? "#{variance > 0 ? '+' : ''}#{variance}%" : "—" %>
+          </p>
+        </div>
+        <div>
+          <p class="text-xs text-secondary">Snapshots</p>
+          <p class="text-lg font-medium text-primary"><%= @snapshots.size %></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Snapshot Table -->
+    <section class="bg-container shadow-border-xs rounded-xl overflow-hidden">
+      <div class="hidden md:grid grid-cols-12 bg-container-inset px-5 py-3 text-xs uppercase font-medium text-secondary">
+        <p class="col-span-2">Date</p>
+        <p class="col-span-3">Portfolio Value</p>
+        <p class="col-span-2">Success Rate</p>
+        <p class="col-span-2">Variance</p>
+        <p class="col-span-2">Status</p>
+        <p class="col-span-1">Notes</p>
+      </div>
+
+      <% @snapshots.each do |snapshot| %>
+        <div class="grid grid-cols-1 md:grid-cols-12 px-5 py-3 border-t border-divider items-center text-sm">
+          <p class="col-span-2 text-primary font-medium"><%= snapshot.snapshot_date.strftime("%b %d, %Y") %></p>
+          <p class="col-span-3 text-primary"><%= format_money Money.new(snapshot.current_portfolio_value || 0, @scenario.family.currency) %></p>
+          <p class="col-span-2"><%= snapshot.monte_carlo_success_rate ? "~#{snapshot.monte_carlo_success_rate.to_i}%" : "—" %></p>
+          <p class="col-span-2">
+            <% v = snapshot.portfolio_variance_percent %>
+            <% if v %>
+              <span class="<%= v > 0 ? 'text-green-600' : v < 0 ? 'text-red-600' : 'text-primary' %>">
+                <%= v > 0 ? '+' : '' %><%= v %>%
+              </span>
+            <% else %>
+              —
+            <% end %>
+          </p>
+          <p class="col-span-2"><%= snapshot.tracking_status_label %></p>
+          <p class="col-span-1 text-secondary text-xs truncate"><%= snapshot.notes %></p>
+        </div>
+      <% end %>
+    </section>
+
+  <% else %>
+    <div class="flex justify-center items-center h-[300px] text-sm">
+      <div class="text-center flex flex-col items-center max-w-[300px]">
+        <p class="text-primary mb-1 font-medium">No snapshots yet</p>
+        <p class="text-secondary mb-4">Take your first snapshot to start tracking progress over time.</p>
+        <%= render DS::Button.new(
+          text: "Take Snapshot",
+          icon: "camera",
+          variant: :primary,
+          href: simulate_retirement_scenario_path(@scenario),
+          method: :post
+        ) %>
+      </div>
+    </div>
+  <% end %>
+</div>

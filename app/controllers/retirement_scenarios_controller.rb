@@ -1,5 +1,9 @@
 class RetirementScenariosController < ApplicationController
-  before_action :set_scenario, only: [ :show, :edit, :update, :destroy, :recalculate, :explore, :apply_exploration ]
+  before_action :set_scenario, only: [
+    :show, :edit, :update, :destroy,
+    :simulate, :explore, :apply_exploration,
+    :snapshots, :income_timeline, :portfolio
+  ]
 
   WIZARD_STEPS = %w[basics cashflow income portfolio].freeze
 
@@ -9,15 +13,17 @@ class RetirementScenariosController < ApplicationController
   end
 
   def show
-    # Main retirement planning view
+    # Results are stored and only re-run on explicit user action (Simulate button)
   end
 
   def new
     @scenario = Current.family.retirement_scenarios.build(
       calculation_date: Date.today,
-      portfolio_withdrawal_rate: 4.0,
       portfolio_growth_rate: 7.0,
+      portfolio_growth_std_dev: 15.0,
       inflation_rate: 3.0,
+      simulation_count: 1000,
+      target_age: 90,
       name: "My Retirement Plan",
       scenario_type: params[:scenario_type] || "household"
     )
@@ -26,8 +32,7 @@ class RetirementScenariosController < ApplicationController
     @scenario.build_pension_sources_for_accounts
     @persons = Current.family.persons.ordered
     @analysis = build_cash_flow_analysis
-    @step = params[:step] || "basics"
-    @step = "basics" unless WIZARD_STEPS.include?(@step)
+    @step = validated_step
     render layout: "wizard"
   end
 
@@ -37,19 +42,13 @@ class RetirementScenariosController < ApplicationController
 
     if @scenario.save
       @scenario.build_auto_milestones
+      @scenario.enqueue_monte_carlo!
       redirect_to retirement_scenario_path(@scenario), notice: t(".success")
     else
       @step = params[:step] || "basics"
+      @analysis = build_cash_flow_analysis
+      @persons = Current.family.persons.ordered
       render :new, status: :unprocessable_entity, layout: "wizard"
-    end
-  end
-
-  def update
-    if @scenario.update(scenario_params)
-      redirect_to retirement_scenario_path(@scenario), notice: t(".success")
-    else
-      @step = "basics"
-      render :edit, status: :unprocessable_entity, layout: "wizard"
     end
   end
 
@@ -58,8 +57,20 @@ class RetirementScenariosController < ApplicationController
     @scenario.build_pension_sources_for_accounts
     @persons = Current.family.persons.ordered
     @analysis = build_cash_flow_analysis
-    @step = "basics"
+    @step = validated_step
     render layout: "wizard"
+  end
+
+  def update
+    if @scenario.update(scenario_params)
+      @scenario.enqueue_monte_carlo!
+      redirect_to retirement_scenario_path(@scenario), notice: t(".success")
+    else
+      @step = "basics"
+      @analysis = build_cash_flow_analysis
+      @persons = Current.family.persons.ordered
+      render :edit, status: :unprocessable_entity, layout: "wizard"
+    end
   end
 
   def destroy
@@ -67,17 +78,24 @@ class RetirementScenariosController < ApplicationController
     redirect_to retirement_scenarios_path, notice: t(".success")
   end
 
-  # Interactive exploration: recalculate with overridden dates (no save)
+  # Run Monte Carlo simulation + take snapshot
+  def simulate
+    @scenario.enqueue_monte_carlo!
+    @scenario.create_snapshot_if_needed!(notes: "Manual simulation")
+    redirect_to retirement_scenario_path(@scenario), notice: "Simulation started"
+  end
+
+  # Interactive exploration: quick Monte Carlo with overridden params (no save)
   def explore
     explorer = RetirementScenario::Explorer.new(@scenario, explore_params)
-    @explored = explorer.explore
+    @explored_results = explorer.explore
 
     respond_to do |format|
       format.turbo_stream
     end
   end
 
-  # Persist explored dates
+  # Persist explored params and re-simulate
   def apply_exploration
     @scenario.apply_exploration!(explore_params)
     redirect_to retirement_scenario_path(@scenario), notice: t(".success")
@@ -85,11 +103,20 @@ class RetirementScenariosController < ApplicationController
     redirect_to retirement_scenario_path(@scenario), alert: t(".failure")
   end
 
-  # Recalculate with current data and create snapshot
-  def recalculate
-    @scenario.recalculate!
-    @scenario.create_snapshot_if_needed!(notes: "Manual snapshot")
-    redirect_to retirement_scenario_path(@scenario), notice: t(".success")
+  # Snapshot history page
+  def snapshots
+    @snapshots = @scenario.snapshots.reverse_chronological
+    @chart_data = RetirementScenario::SnapshotHistoryBuilder.new(@scenario).build_chart_data
+  end
+
+  # Income timeline page
+  def income_timeline
+    @chart_data = RetirementScenario::IncomeTimelineBuilder.new(@scenario).build_chart_data
+  end
+
+  # Portfolio projection page
+  def portfolio
+    @chart_data = RetirementScenario::PortfolioProjectionBuilder.new(@scenario).build_chart_data
   end
 
   private
@@ -100,27 +127,11 @@ class RetirementScenariosController < ApplicationController
 
     def scenario_params
       params.require(:retirement_scenario).permit(
-        :name,
-        :description,
-        :is_primary,
-        :scenario_type,
-        :person_id,
+        :name, :description, :is_primary, :scenario_type, :person_id,
         :retirement_monthly_expenses,
-        :portfolio_withdrawal_rate,
-        :salary_end_date,
-        :current_annual_salary,
-        :gesetzliche_rente_start_date,
-        :gesetzliche_rente_monthly,
-        :riester_monthly,
-        :ruerup_monthly,
-        :betriebsrente_monthly,
-        :other_pension_start_date,
-        :other_pension_monthly,
-        :portfolio_growth_rate,
-        :monthly_contribution,
-        :inflation_rate,
-        :after_tax_monthly_income,
-        :monthly_living_expenses,
+        :portfolio_growth_rate, :portfolio_growth_std_dev, :inflation_rate,
+        :simulation_count, :target_age,
+        :monthly_contribution, :after_tax_monthly_income, :monthly_living_expenses,
         :analysis_year,
         pension_sources_attributes: [ :id, :account_id, :expected_monthly_payout, :payout_start_date, :_destroy ],
         milestones_attributes: [ :id, :milestone_type, :date, :label, :amount, :account_id, :_destroy ],
@@ -138,11 +149,16 @@ class RetirementScenariosController < ApplicationController
 
     def explore_params
       params.permit(
-        :salary_end_date,
-        :gesetzliche_rente_start_date,
+        :retirement_monthly_expenses, :monthly_contribution,
+        :portfolio_growth_rate, :inflation_rate, :target_age,
         person_retirement_dates: {},
         pension_payout_dates: {}
       )
+    end
+
+    def validated_step
+      step = params[:step] || "basics"
+      WIZARD_STEPS.include?(step) ? step : "basics"
     end
 
     def build_cash_flow_analysis
@@ -155,8 +171,6 @@ class RetirementScenariosController < ApplicationController
     end
 
     def build_scenario_persons(scenario)
-      # Always pre-build persons for all family members so the form has them ready
-      # when the user switches scenario type client-side (no server round-trip)
       Current.family.persons.ordered.each do |person|
         unless scenario.retirement_scenario_persons.any? { |rsp| rsp.person_id == person.id }
           scenario.retirement_scenario_persons.build(person: person)

@@ -1,11 +1,12 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["slider", "dateLabel", "payoutDate", "applyButton", "loadingIndicator"]
+  static targets = ["expenseInput", "contributionInput", "targetAgeInput", "growthRateInput",
+                     "applyButton", "loadingIndicator", "results", "exploredRate"]
   static values = {
     url: String,
     applyUrl: String,
-    debounce: { type: Number, default: 400 }
+    debounce: { type: Number, default: 600 }
   }
 
   connect() {
@@ -19,53 +20,45 @@ export default class extends Controller {
     this._abortController?.abort()
   }
 
-  // Called on slider `input` event — updates label immediately, debounces server call
-  sliderChanged(event) {
-    const slider = event.currentTarget
-    const dateStr = this._sliderValueToDate(slider)
-
-    // Update the adjacent date label
-    const labelId = slider.dataset.labelTarget
-    const label = document.getElementById(labelId)
-    if (label) label.textContent = this._formatDate(dateStr)
-
+  paramChanged() {
     this._scheduleExplore()
   }
 
-  // Called on payout date `change` event
-  payoutDateChanged() {
-    this._scheduleExplore()
-  }
-
-  // Apply explored dates to the scenario
   apply() {
-    const form = document.getElementById("apply-exploration-form")
-    if (!form) return
+    // Submit as form to apply_exploration endpoint
+    const form = document.createElement("form")
+    form.method = "POST"
+    form.action = this.applyUrlValue
 
-    // Clear existing dynamic hidden fields
-    form.querySelectorAll("input.explore-param").forEach(el => el.remove())
+    // CSRF token
+    const csrfToken = document.querySelector("meta[name='csrf-token']")?.content
+    if (csrfToken) {
+      const tokenInput = document.createElement("input")
+      tokenInput.type = "hidden"
+      tokenInput.name = "authenticity_token"
+      tokenInput.value = csrfToken
+      form.appendChild(tokenInput)
+    }
 
-    // Add current slider values
-    this.sliderTargets.forEach(slider => {
+    // Method override for PATCH
+    const methodInput = document.createElement("input")
+    methodInput.type = "hidden"
+    methodInput.name = "_method"
+    methodInput.value = "patch"
+    form.appendChild(methodInput)
+
+    // Add current values
+    const params = this._collectParams()
+    for (const [key, value] of Object.entries(params)) {
       const input = document.createElement("input")
       input.type = "hidden"
-      input.name = slider.dataset.paramName
-      input.value = this._sliderValueToDate(slider)
-      input.classList.add("explore-param")
+      input.name = key
+      input.value = value
       form.appendChild(input)
-    })
+    }
 
-    // Add current payout date values
-    this.payoutDateTargets.forEach(dateInput => {
-      const input = document.createElement("input")
-      input.type = "hidden"
-      input.name = dateInput.dataset.paramName
-      input.value = dateInput.value
-      input.classList.add("explore-param")
-      form.appendChild(input)
-    })
-
-    form.requestSubmit()
+    document.body.appendChild(form)
+    form.submit()
   }
 
   // Private
@@ -77,26 +70,13 @@ export default class extends Controller {
   }
 
   async _explore() {
-    // Abort any in-flight request
     this._abortController?.abort()
     this._abortController = new AbortController()
 
     this._showLoading()
+    this._showResults()
 
-    const params = new URLSearchParams()
-
-    // Collect slider values
-    this.sliderTargets.forEach(slider => {
-      const paramName = slider.dataset.paramName
-      const dateStr = this._sliderValueToDate(slider)
-      params.append(paramName, dateStr)
-    })
-
-    // Collect payout date values
-    this.payoutDateTargets.forEach(input => {
-      const paramName = input.dataset.paramName
-      if (input.value) params.append(paramName, input.value)
-    })
+    const params = new URLSearchParams(this._collectParams())
 
     try {
       const response = await fetch(`${this.urlValue}?${params.toString()}`, {
@@ -120,42 +100,34 @@ export default class extends Controller {
     }
   }
 
-  _sliderValueToDate(slider) {
-    const epochDate = new Date(slider.dataset.epochDate + "T00:00:00")
-    const days = parseInt(slider.value, 10)
-    const date = new Date(epochDate.getTime() + days * 86400000)
-    return date.toISOString().split("T")[0]
-  }
-
-  _formatDate(isoDate) {
-    const d = new Date(isoDate + "T00:00:00")
-    return d.toLocaleDateString(undefined, { year: "numeric", month: "long" })
+  _collectParams() {
+    const params = {}
+    if (this.hasExpenseInputTarget) params.retirement_monthly_expenses = this.expenseInputTarget.value
+    if (this.hasContributionInputTarget) params.monthly_contribution = this.contributionInputTarget.value
+    if (this.hasTargetAgeInputTarget) params.target_age = this.targetAgeInputTarget.value
+    if (this.hasGrowthRateInputTarget) params.portfolio_growth_rate = this.growthRateInputTarget.value
+    return params
   }
 
   _captureCurrentValues() {
-    const values = {}
-    this.sliderTargets.forEach(s => { values[s.id] = s.value })
-    this.payoutDateTargets.forEach(p => { values[p.id] = p.value })
-    return values
+    return JSON.stringify(this._collectParams())
   }
 
   _toggleApplyButton() {
     if (!this.hasApplyButtonTarget) return
-
-    const current = this._captureCurrentValues()
-    const changed = JSON.stringify(current) !== JSON.stringify(this._initialValues)
+    const changed = JSON.stringify(this._collectParams()) !== this._initialValues
     this.applyButtonTarget.classList.toggle("hidden", !changed)
   }
 
+  _showResults() {
+    if (this.hasResultsTarget) this.resultsTarget.classList.remove("hidden")
+  }
+
   _showLoading() {
-    if (this.hasLoadingIndicatorTarget) {
-      this.loadingIndicatorTarget.classList.remove("hidden")
-    }
+    if (this.hasLoadingIndicatorTarget) this.loadingIndicatorTarget.classList.remove("hidden")
   }
 
   _hideLoading() {
-    if (this.hasLoadingIndicatorTarget) {
-      this.loadingIndicatorTarget.classList.add("hidden")
-    }
+    if (this.hasLoadingIndicatorTarget) this.loadingIndicatorTarget.classList.add("hidden")
   }
 }

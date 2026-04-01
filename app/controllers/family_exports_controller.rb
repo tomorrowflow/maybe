@@ -28,7 +28,7 @@ class FamilyExportsController < ApplicationController
 
   def download
     if @export.downloadable?
-      redirect_to @export.export_file, allow_other_host: true
+      redirect_to rails_blob_path(@export.export_file, disposition: :attachment), allow_other_host: true
     else
       redirect_to settings_profile_path, alert: "Export not ready for download"
     end

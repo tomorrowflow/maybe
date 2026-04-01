@@ -1,0 +1,134 @@
+<div class="space-y-6 max-w-5xl mx-auto">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-medium text-primary"><%= @scenario.name %></h1>
+    <%= render DS::Link.new(text: "Edit", icon: "pencil", variant: :outline, href: edit_retirement_scenario_path(@scenario)) %>
+  </div>
+
+  <!-- Page Navigation -->
+  <%= render "retirement_scenarios/page_nav", scenario: @scenario, active: :portfolio %>
+
+  <% meta = @chart_data[:metadata] %>
+
+  <% if meta[:simulation_count].to_i > 0 %>
+    <!-- Summary Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+      <div class="rounded-xl bg-container shadow-xs border border-alpha-black-25 p-4">
+        <h4 class="text-secondary text-sm">Starting Value</h4>
+        <p class="text-xl font-medium text-primary"><%= format_money Money.new(meta[:starting_value] || 0, @scenario.family.currency) %></p>
+      </div>
+      <div class="rounded-xl bg-container shadow-xs border border-alpha-black-25 p-4">
+        <h4 class="text-secondary text-sm">Median Final Value</h4>
+        <p class="text-xl font-medium text-primary"><%= format_money Money.new(meta[:median_final_value] || 0, @scenario.family.currency) %></p>
+      </div>
+      <div class="rounded-xl bg-container shadow-xs border border-alpha-black-25 p-4">
+        <h4 class="text-secondary text-sm">Worst Case (p10)</h4>
+        <p class="text-xl font-medium text-primary"><%= format_money Money.new(meta[:worst_case_final_value] || 0, @scenario.family.currency) %></p>
+      </div>
+      <div class="rounded-xl bg-container shadow-xs border border-alpha-black-25 p-4">
+        <h4 class="text-secondary text-sm">Best Case (p90)</h4>
+        <p class="text-xl font-medium text-primary"><%= format_money Money.new(meta[:best_case_final_value] || 0, @scenario.family.currency) %></p>
+      </div>
+    </div>
+
+    <!-- Assumptions -->
+    <section class="bg-container shadow-border-xs rounded-xl p-4">
+      <h3 class="text-sm font-medium text-secondary mb-3">Simulation Parameters</h3>
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+        <div>
+          <p class="text-secondary">Mean Return</p>
+          <p class="font-medium text-primary"><%= meta[:growth_rate] %>%</p>
+        </div>
+        <div>
+          <p class="text-secondary">Volatility</p>
+          <p class="font-medium text-primary"><%= meta[:growth_std_dev] %>%</p>
+        </div>
+        <div>
+          <p class="text-secondary">Inflation</p>
+          <p class="font-medium text-primary"><%= meta[:inflation_rate] %>%</p>
+        </div>
+        <div>
+          <p class="text-secondary">Simulations</p>
+          <p class="font-medium text-primary"><%= meta[:simulation_count] %></p>
+        </div>
+        <div>
+          <p class="text-secondary">Projection</p>
+          <p class="font-medium text-primary"><%= meta[:projection_years] %> years</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Confidence Band Chart -->
+    <section class="bg-container shadow-border-xs rounded-xl p-4 space-y-3">
+      <h2 class="text-lg font-medium text-primary">Confidence Bands</h2>
+      <p class="text-sm text-secondary">Shows the range of possible outcomes across <%= meta[:simulation_count] %> simulations</p>
+      <div class="h-96 bg-surface-inset rounded-lg flex items-center justify-center"
+           data-controller="monte-carlo-chart"
+           data-monte-carlo-chart-data-value="<%= @scenario.monte_carlo_results.to_json %>">
+        <p class="text-sm text-subdued">Chart loading...</p>
+      </div>
+      <div class="flex items-center justify-center gap-6 text-xs text-secondary">
+        <div class="flex items-center gap-1.5">
+          <div class="w-3 h-3 rounded bg-blue-200"></div>
+          <span>10th-90th percentile</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <div class="w-3 h-3 rounded bg-blue-400"></div>
+          <span>25th-75th percentile</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <div class="w-3 h-1 bg-blue-600 rounded"></div>
+          <span>Median (50th)</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Percentile Table at Key Ages -->
+    <% if @chart_data[:confidence_bands].any? %>
+      <section class="bg-container shadow-border-xs rounded-xl overflow-hidden">
+        <div class="p-4">
+          <h3 class="text-sm font-medium text-secondary">Portfolio Value at Key Years</h3>
+        </div>
+        <div class="hidden md:grid grid-cols-12 bg-container-inset px-5 py-2 text-xs uppercase font-medium text-secondary">
+          <p class="col-span-2">Year</p>
+          <p class="col-span-2">Pessimistic (p10)</p>
+          <p class="col-span-2">Conservative (p25)</p>
+          <p class="col-span-2">Median (p50)</p>
+          <p class="col-span-2">Optimistic (p75)</p>
+          <p class="col-span-2">Best Case (p90)</p>
+        </div>
+        <%
+          bands = @chart_data[:confidence_bands]
+          # Show every 5 years + last year
+          key_indices = (0...bands.size).select { |i| bands[i][:year] % 5 == 0 || i == bands.size - 1 }.uniq
+        %>
+        <% key_indices.each do |i| %>
+          <% band = bands[i] %>
+          <div class="grid grid-cols-2 md:grid-cols-12 px-5 py-2 border-t border-divider text-sm">
+            <p class="col-span-2 font-medium text-primary">Year <%= band[:year] %></p>
+            <p class="col-span-2 text-secondary"><%= format_money Money.new(band[:p10], @scenario.family.currency) %></p>
+            <p class="col-span-2 text-secondary"><%= format_money Money.new(band[:p25], @scenario.family.currency) %></p>
+            <p class="col-span-2 text-primary font-medium"><%= format_money Money.new(band[:p50], @scenario.family.currency) %></p>
+            <p class="col-span-2 text-secondary"><%= format_money Money.new(band[:p75], @scenario.family.currency) %></p>
+            <p class="col-span-2 text-secondary"><%= format_money Money.new(band[:p90], @scenario.family.currency) %></p>
+          </div>
+        <% end %>
+      </section>
+    <% end %>
+
+  <% else %>
+    <div class="flex justify-center items-center h-[300px] text-sm">
+      <div class="text-center flex flex-col items-center max-w-[300px]">
+        <p class="text-primary mb-1 font-medium">No simulation results</p>
+        <p class="text-secondary mb-4">Run a Monte Carlo simulation to see portfolio projections.</p>
+        <%= render DS::Button.new(
+          text: "Run Simulation",
+          icon: "play",
+          variant: :primary,
+          href: simulate_retirement_scenario_path(@scenario),
+          method: :post
+        ) %>
+      </div>
+    </div>
+  <% end %>
+</div>

@@ -1,93 +1,67 @@
-<div data-controller="retirement-explorer"
-     data-retirement-explorer-url-value="<%= explore_retirement_scenario_path(scenario) %>"
-     data-retirement-explorer-apply-url-value="<%= apply_exploration_retirement_scenario_path(scenario) %>">
+<%# locals: (scenario:) %>
+<section class="bg-container shadow-border-xs rounded-xl p-4 space-y-4"
+         data-controller="retirement-explorer"
+         data-retirement-explorer-url-value="<%= explore_retirement_scenario_path(scenario) %>"
+         data-retirement-explorer-apply-url-value="<%= apply_exploration_retirement_scenario_path(scenario) %>">
 
-  <div class="bg-container rounded-xl p-6 shadow-border-xs">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-lg font-semibold text-primary">
-        <%= icon "sliders-horizontal", class: "w-5 h-5 inline mr-2" %>
-        Explore Retirement Date
-      </h2>
-      <div data-retirement-explorer-target="loadingIndicator" class="hidden">
-        <%= icon "loader", class: "w-4 h-4 animate-spin text-secondary" %>
-      </div>
+  <div class="flex items-center justify-between">
+    <div>
+      <h2 class="text-lg font-medium text-primary">What-If Explorer</h2>
+      <p class="text-sm text-secondary">Adjust parameters to see how they affect your probability</p>
+    </div>
+    <button class="hidden px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+            data-retirement-explorer-target="applyButton"
+            data-action="click->retirement-explorer#apply">
+      Apply Changes
+    </button>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="form-field">
+      <label class="form-field__label">Monthly Retirement Expenses</label>
+      <input type="number" min="0" step="100"
+             value="<%= scenario.retirement_monthly_expenses&.to_i %>"
+             class="form-field__input"
+             data-retirement-explorer-target="expenseInput"
+             data-action="input->retirement-explorer#paramChanged">
     </div>
 
-    <p class="text-sm text-secondary mb-4">
-      Drag the slider to explore how different retirement dates affect your plan. Changes are not saved until you click "Apply Changes".
-    </p>
+    <div class="form-field">
+      <label class="form-field__label">Monthly Contribution</label>
+      <input type="number" min="0" step="50"
+             value="<%= (scenario.monthly_contribution || scenario.effective_monthly_savings).to_i %>"
+             class="form-field__input"
+             data-retirement-explorer-target="contributionInput"
+             data-action="input->retirement-explorer#paramChanged">
+    </div>
 
-    <% if scenario.household? %>
-      <%# Single slider for household retirement date %>
-      <%= render "retirement_scenarios/explore_slider",
-                 param_name: "salary_end_date",
-                 label: "Retirement Date",
-                 current_date: scenario.salary_end_date || scenario.projected_retirement_date,
-                 min_date: Date.today,
-                 max_date: Date.today + 40.years %>
-    <% elsif scenario.personal? && scenario.retirement_scenario_persons.any? %>
-      <%# Single person slider %>
-      <% rsp = scenario.retirement_scenario_persons.includes(:person).first %>
-      <% if rsp %>
-        <%= render "retirement_scenarios/explore_slider",
-                   param_name: "person_retirement_dates[#{rsp.id}]",
-                   label: "#{rsp.person.first_name}'s Retirement Date",
-                   current_date: rsp.effective_retirement_date || scenario.projected_retirement_date,
-                   min_date: Date.today,
-                   max_date: rsp.person.estimated_retirement_date&.+(5.years) || (Date.today + 40.years) %>
-      <% end %>
-    <% elsif scenario.joint? && scenario.retirement_scenario_persons.any? %>
-      <%# Per-person sliders for joint scenarios %>
-      <% scenario.retirement_scenario_persons.includes(:person).each do |rsp| %>
-        <%= render "retirement_scenarios/explore_slider",
-                   param_name: "person_retirement_dates[#{rsp.id}]",
-                   label: "#{rsp.person.first_name}'s Retirement Date",
-                   current_date: rsp.effective_retirement_date || scenario.projected_retirement_date,
-                   min_date: Date.today,
-                   max_date: rsp.person.estimated_retirement_date&.+(5.years) || (Date.today + 40.years) %>
-      <% end %>
-    <% end %>
+    <div class="form-field">
+      <label class="form-field__label">Plan Through Age</label>
+      <input type="number" min="60" max="120" step="1"
+             value="<%= scenario.target_age %>"
+             class="form-field__input"
+             data-retirement-explorer-target="targetAgeInput"
+             data-action="input->retirement-explorer#paramChanged">
+    </div>
 
-    <%# Pension payout date pickers %>
-    <% pension_sources_with_payout = scenario.pension_sources.with_payout.includes(:account) %>
-    <% if pension_sources_with_payout.any? %>
-      <div class="mt-4 pt-4 border-t border-secondary">
-        <h3 class="text-sm font-semibold text-secondary mb-3">
-          <%= icon "calendar", class: "w-4 h-4 inline mr-1" %>
-          Pension Payout Start Dates
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <% pension_sources_with_payout.each do |ps| %>
-            <div class="flex items-center justify-between gap-3 bg-surface-inset rounded-lg px-3 py-2">
-              <div class="text-sm text-primary truncate">
-                <%= ps.account.name %>
-                <span class="text-xs text-secondary">(<%= ps.account.short_subtype_label %>)</span>
-              </div>
-              <input type="date"
-                     value="<%= ps.payout_start_date&.iso8601 %>"
-                     autocomplete="off"
-                     data-retirement-explorer-target="payoutDate"
-                     data-param-name="pension_payout_dates[<%= ps.id %>]"
-                     data-action="change->retirement-explorer#payoutDateChanged"
-                     class="text-sm border border-secondary rounded-lg px-3 py-1.5 bg-container text-primary shrink-0">
-            </div>
-          <% end %>
-        </div>
-      </div>
-    <% end %>
-
-    <%# Apply Changes button (hidden by default) %>
-    <div data-retirement-explorer-target="applyButton" class="hidden mt-4 pt-4 border-t border-secondary">
-      <%= form_with url: apply_exploration_retirement_scenario_path(scenario), method: :patch, id: "apply-exploration-form" do %>
-        <%# Hidden fields populated by JS before submit %>
-      <% end %>
-      <button type="button"
-              data-action="click->retirement-explorer#apply"
-              class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
-        <%= icon "check", class: "w-4 h-4" %>
-        Apply Changes
-      </button>
-      <span class="text-xs text-secondary ml-2">Save the explored dates to your scenario</span>
+    <div class="form-field">
+      <label class="form-field__label">Expected Return (%)</label>
+      <input type="number" min="-20" max="50" step="0.5"
+             value="<%= scenario.portfolio_growth_rate %>"
+             class="form-field__input"
+             data-retirement-explorer-target="growthRateInput"
+             data-action="input->retirement-explorer#paramChanged">
     </div>
   </div>
-</div>
+
+  <!-- Explored results area (updated via Turbo Stream) -->
+  <div id="explore-results-<%= scenario.id %>" class="hidden border-t border-divider pt-4"
+       data-retirement-explorer-target="results">
+    <div class="flex items-center gap-2">
+      <div class="animate-spin text-secondary hidden" data-retirement-explorer-target="loadingIndicator">
+        <%= icon("loader-2", size: "sm") %>
+      </div>
+      <p class="text-sm text-secondary" data-retirement-explorer-target="exploredRate">-</p>
+    </div>
+  </div>
+</section>

@@ -9,7 +9,6 @@
 <div class="mx-auto max-w-lg space-y-4">
   <!-- Salary section -->
   <% if scenario.retirement_scenario_persons.any? %>
-    <%# Per-person salary + retirement fields (for household, joint, and personal) %>
     <div class="space-y-4">
       <%= form.fields_for :retirement_scenario_persons do |rsp_form| %>
         <%= render "retirement_scenarios/person_income_fields",
@@ -19,16 +18,8 @@
       <% end %>
     </div>
   <% else %>
-    <%# Fallback: no persons configured yet %>
-    <div class="grid grid-cols-2 gap-4">
-      <%= form.date_field :salary_end_date,
-                          label: t("retirement_scenarios.form.last_day_of_salary") %>
-
-      <%= form.number_field :current_annual_salary,
-                            label: "Annual Salary (after tax)",
-                            placeholder: "45000",
-                            min: 0,
-                            step: 100 %>
+    <div class="bg-surface-inset rounded-lg p-4 text-center">
+      <p class="text-sm text-secondary">No persons configured for this family. Add persons in Settings to configure per-person income.</p>
     </div>
   <% end %>
 

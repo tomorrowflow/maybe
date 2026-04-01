@@ -1,19 +1,25 @@
-<%= turbo_stream.replace "explore-readiness-card" do %>
-  <%= render "retirement_scenarios/readiness_card", scenario: @explored %>
-<% end %>
-
-<%= turbo_stream.replace "explore-cash-flow-card" do %>
-  <%= render "retirement_scenarios/cash_flow_card", scenario: @explored %>
-<% end %>
-
-<%= turbo_stream.replace "explore-income-breakdown" do %>
-  <%= render "retirement_scenarios/income_breakdown", scenario: @explored %>
-<% end %>
-
-<%= turbo_stream.replace "explore-income-timeline" do %>
-  <%= render "retirement_scenarios/income_timeline_section", scenario: @explored %>
-<% end %>
-
-<%= turbo_stream.replace "explore-portfolio-projection" do %>
-  <%= render "retirement_scenarios/portfolio_projection_section", scenario: @explored %>
+<%= turbo_stream.replace "explore-results-#{@scenario.id}" do %>
+  <div id="explore-results-<%= @scenario.id %>" class="border-t border-divider pt-4">
+    <% if @explored_results.present? %>
+      <%
+        rate = @explored_results[:success_rate].to_i
+        color_class = if rate >= 80
+          "text-green-600"
+        elsif rate >= 50
+          "text-yellow-600"
+        else
+          "text-red-600"
+        end
+      %>
+      <div class="flex items-center gap-3">
+        <p class="text-2xl font-bold <%= color_class %>">~<%= rate %>%</p>
+        <p class="text-sm text-secondary">
+          probability of success with these parameters
+          <span class="text-xs text-subdued">(<%= @explored_results[:simulation_count] %> quick simulations)</span>
+        </p>
+      </div>
+    <% else %>
+      <p class="text-sm text-secondary">Unable to calculate. Check your parameters.</p>
+    <% end %>
+  </div>
 <% end %>

@@ -7,10 +7,7 @@ class RetirementScenarioSnapshot < ApplicationRecord
   validates :snapshot_date, uniqueness: { scope: :retirement_scenario_id }
 
   monetize :current_portfolio_value,
-           :required_portfolio_value,
-           :portfolio_gap,
            :total_pension_income,
-           :income_gap_monthly,
            :projected_portfolio_value,
            :monthly_contribution_assumption
 
@@ -29,35 +26,31 @@ class RetirementScenarioSnapshot < ApplicationRecord
     Money.new(portfolio_variance, currency)
   end
 
-  # Variance as a percentage of projected
   def portfolio_variance_percent
     return nil unless projected_portfolio_value.present? && projected_portfolio_value > 0
     return nil unless portfolio_variance
     (portfolio_variance / projected_portfolio_value * 100).round(2)
   end
 
-  # Is actual ahead of, behind, or on track with projection?
+  # Tracking status based on Monte Carlo success rate changes
   def tracking_status
-    return :no_projection unless projected_portfolio_value.present?
+    return :no_data unless monte_carlo_success_rate.present?
 
-    variance_pct = portfolio_variance_percent
-    return :on_track if variance_pct.nil?
-
-    if variance_pct > 5
-      :ahead
-    elsif variance_pct < -5
-      :behind
-    else
+    if monte_carlo_success_rate >= 80
       :on_track
+    elsif monte_carlo_success_rate >= 50
+      :needs_attention
+    else
+      :at_risk
     end
   end
 
   def tracking_status_label
     case tracking_status
-    when :ahead then "Ahead of projection"
-    when :behind then "Behind projection"
     when :on_track then "On track"
-    else "No projection data"
+    when :needs_attention then "Needs attention"
+    when :at_risk then "At risk"
+    else "No data"
     end
   end
 
@@ -70,7 +63,6 @@ class RetirementScenarioSnapshot < ApplicationRecord
     months = months_between(previous_snapshot.snapshot_date, snapshot_date)
     return nil if months <= 0
 
-    # Calculate monthly growth rate, then annualize
     total_growth = current_portfolio_value / previous_snapshot.current_portfolio_value
     monthly_rate = total_growth ** (1.0 / months) - 1
     annual_rate = ((1 + monthly_rate) ** 12 - 1) * 100
