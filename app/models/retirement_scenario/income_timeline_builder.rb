@@ -14,6 +14,7 @@ class RetirementScenario
         milestones: build_milestone_markers,
         gap_period: detect_gap_period,
         expenses_line: build_expenses_line(timeline),
+        savings_line: build_savings_line(years),
         metadata: build_metadata(years, timeline)
       }
     end
@@ -203,6 +204,21 @@ class RetirementScenario
 
       def build_expenses_line(timeline)
         timeline.map { |t| { date: t[:date].to_s, value: t[:expenses] } }
+      end
+
+      def build_savings_line(years)
+        # Use median savings from Monte Carlo results if available
+        mc_results = scenario.monte_carlo_results
+        savings_p50 = mc_results.dig("savings_percentiles", "p50") if mc_results.present?
+
+        if savings_p50.present? && savings_p50.is_a?(Array)
+          start = scenario.calculation_date || Date.today
+          savings_p50.each_with_index.map do |value, year|
+            { date: (start + year.years).to_s, value: (value || 0).to_f.round(2) }
+          end
+        else
+          []
+        end
       end
 
       def build_metadata(years, timeline)

@@ -14,4 +14,5 @@ class Setting < RailsSettings::Base
   field :eurostat_default_region, type: :string, default: ENV.fetch("EUROSTAT_DEFAULT_REGION", "EU")
 
   field :retirement_target_age, type: :integer, default: ENV.fetch("RETIREMENT_TARGET_AGE", "90").to_i
+  field :retirement_target_savings, type: :integer, default: ENV.fetch("RETIREMENT_TARGET_SAVINGS", "50000").to_i
 end

@@ -248,6 +248,57 @@
     </section>
   <% end %>
 
+  <!-- Savings Gap Coverage -->
+  <% gap_coverage = analysis[:savings_gap_coverage] || [] %>
+  <% if gap_coverage.any? %>
+    <section class="bg-container shadow-border-xs rounded-xl p-4 space-y-4">
+      <h3 class="text-lg font-medium text-primary">Savings Gap Coverage</h3>
+      <p class="text-sm text-secondary">
+        Can your projected savings bridge the income gap between salary ending and pensions starting?
+      </p>
+
+      <% gap_coverage.each do |gap| %>
+        <div class="bg-surface-inset rounded-lg p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <p class="font-medium text-primary text-sm"><%= gap[:person_name] %></p>
+            <span class="text-xs text-secondary"><%= gap[:gap_months] %> month gap (<%= gap[:gap_start] %> to <%= gap[:gap_end] %>)</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-3">
+            <div>
+              <p class="text-xs text-secondary">Gap Cost</p>
+              <p class="text-sm font-medium text-primary"><%= format_money Money.new(gap[:gap_cost], scenario.family.currency) %></p>
+            </div>
+            <div>
+              <p class="text-xs text-secondary">Projected Savings</p>
+              <p class="text-sm font-medium text-primary"><%= format_money Money.new(gap[:median_savings_at_gap], scenario.family.currency) %></p>
+            </div>
+            <div>
+              <p class="text-xs text-secondary">Coverage</p>
+              <% if gap[:sufficient] %>
+                <p class="text-sm font-medium text-green-600"><%= gap[:coverage_ratio] %>% — Covered</p>
+              <% else %>
+                <p class="text-sm font-medium text-red-600"><%= gap[:coverage_ratio] %>% — Shortfall</p>
+              <% end %>
+            </div>
+          </div>
+
+          <% if gap[:sufficient] %>
+            <div class="flex items-center gap-2 text-sm text-green-600">
+              <%= icon("check-circle", size: "sm") %>
+              <span>Savings can bridge this gap with <%= format_money Money.new(gap[:median_savings_at_gap] - gap[:gap_cost], scenario.family.currency) %> remaining</span>
+            </div>
+          <% else %>
+            <div class="flex items-center gap-2 text-sm text-red-600">
+              <%= icon("alert-triangle", size: "sm") %>
+              <span>Shortfall of <%= format_money Money.new(gap[:gap_cost] - gap[:median_savings_at_gap], scenario.family.currency) %> — consider pension cashouts or later retirement</span>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </section>
+  <% end %>
+
   <!-- Apply to Explorer (collects sweet spots from all persons + cashout dates) -->
   <%
     explorer_params = {}

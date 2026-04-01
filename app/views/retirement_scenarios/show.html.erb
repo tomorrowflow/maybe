@@ -43,22 +43,27 @@
   </div>
 
   <!-- Key Metrics -->
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
     <div class="rounded-xl bg-container shadow-xs border border-alpha-black-25 p-4">
-      <h4 class="text-secondary text-sm">Portfolio</h4>
-      <p class="text-xl font-medium text-primary"><%= format_money Money.new(@scenario.current_portfolio_value || 0, @scenario.family.currency) %></p>
+      <h4 class="text-secondary text-sm">Savings</h4>
+      <p class="text-xl font-medium text-primary"><%= format_money Money.new(@scenario.current_savings_value || @scenario.scoped_savings_value, @scenario.family.currency) %></p>
     </div>
     <div class="rounded-xl bg-container shadow-xs border border-alpha-black-25 p-4">
-      <h4 class="text-secondary text-sm">Monthly Pension Income</h4>
-      <p class="text-xl font-medium text-primary"><%= format_money Money.new(@scenario.total_pension_income || 0, @scenario.family.currency) %></p>
+      <h4 class="text-secondary text-sm">Investments</h4>
+      <p class="text-xl font-medium text-primary"><%= format_money Money.new(@scenario.scoped_investment_value, @scenario.family.currency) %></p>
+    </div>
+    <div class="rounded-xl bg-container shadow-xs border border-alpha-black-25 p-4">
+      <h4 class="text-secondary text-sm">Pension Income</h4>
+      <p class="text-xl font-medium text-primary"><%= format_money Money.new(@scenario.total_pension_income || 0, @scenario.family.currency) %>/mo</p>
     </div>
     <div class="rounded-xl bg-container shadow-xs border border-alpha-black-25 p-4">
       <h4 class="text-secondary text-sm">Monthly Expenses</h4>
       <p class="text-xl font-medium text-primary"><%= format_money Money.new(@scenario.retirement_monthly_expenses || 0, @scenario.family.currency) %></p>
     </div>
     <div class="rounded-xl bg-container shadow-xs border border-alpha-black-25 p-4">
-      <h4 class="text-secondary text-sm">Monthly Savings</h4>
-      <p class="text-xl font-medium text-primary"><%= format_money Money.new(@scenario.effective_monthly_savings, @scenario.family.currency) %></p>
+      <h4 class="text-secondary text-sm">Illiquid Wealth</h4>
+      <p class="text-xl font-medium text-secondary"><%= format_money Money.new(@scenario.scoped_illiquid_value, @scenario.family.currency) %></p>
+      <p class="text-[10px] text-subdued">Properties (not in simulation)</p>
     </div>
   </div>
 

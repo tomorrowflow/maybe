@@ -2,8 +2,8 @@
   <div>
     <h2 class="font-medium mb-1">Retirement Planning Defaults</h2>
     <p class="text-secondary text-sm mb-4">
-      Set the default target age for retirement planning. This is the age through which income and expenses are projected.
-      Individual retirement plans can override this value.
+      Configure default parameters for retirement planning simulations.
+      Individual retirement plans can override these values.
     </p>
   </div>
 
@@ -13,14 +13,25 @@
                        data: {
                          controller: "auto-submit-form",
                        } do |form| %>
-    <%= form.number_field :retirement_target_age,
-                          label: "Target Age (Plan Through)",
-                          value: Setting.retirement_target_age,
-                          placeholder: "90",
-                          min: 60,
-                          max: 120,
-                          step: 1,
-                          data: { auto_submit_form_target: "auto" },
-                          helper_text: "The age until which retirement simulations project income and expenses (default: 90)" %>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <%= form.number_field :retirement_target_age,
+                            label: "Target Age (Plan Through)",
+                            value: Setting.retirement_target_age,
+                            placeholder: "90",
+                            min: 60,
+                            max: 120,
+                            step: 1,
+                            data: { auto_submit_form_target: "auto" },
+                            helper_text: "The age until which simulations project income and expenses (default: 90)" %>
+
+      <%= form.number_field :retirement_target_savings,
+                            label: "Target Remaining Savings",
+                            value: Setting.retirement_target_savings,
+                            placeholder: "50000",
+                            min: 0,
+                            step: 1000,
+                            data: { auto_submit_form_target: "auto" },
+                            helper_text: "Minimum savings per person at the target age. Joint plans multiply this by the number of persons. (default: 50,000)" %>
+    </div>
   <% end %>
 </div>

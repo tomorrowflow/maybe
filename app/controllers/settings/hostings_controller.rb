@@ -36,6 +36,10 @@ class Settings::HostingsController < ApplicationController
       Setting.retirement_target_age = hosting_params[:retirement_target_age].to_i
     end
 
+    if hosting_params.key?(:retirement_target_savings)
+      Setting.retirement_target_savings = hosting_params[:retirement_target_savings].to_i
+    end
+
     redirect_to settings_hosting_path, notice: t(".success")
   rescue ActiveRecord::RecordInvalid => error
     flash.now[:alert] = t(".failure")
@@ -73,7 +77,7 @@ class Settings::HostingsController < ApplicationController
 
   private
     def hosting_params
-      params.require(:setting).permit(:require_invite_for_signup, :require_email_confirmation, :synth_api_key, :eurostat_enabled, :eurostat_default_region, :retirement_target_age)
+      params.require(:setting).permit(:require_invite_for_signup, :require_email_confirmation, :synth_api_key, :eurostat_enabled, :eurostat_default_region, :retirement_target_age, :retirement_target_savings)
     end
 
     def ensure_admin

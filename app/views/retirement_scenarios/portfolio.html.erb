@@ -12,13 +12,23 @@
 
   <% if meta[:simulation_count].to_i > 0 %>
     <!-- Summary Stats -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+    <%
+      mc_results = @scenario.monte_carlo_results || {}
+      initial_savings = mc_results.dig("initial_savings") || @scenario.scoped_savings_value
+      initial_investments = mc_results.dig("initial_investments") || @scenario.scoped_investment_value
+      target_sav = mc_results.dig("target_savings") || Setting.retirement_target_savings
+    %>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
       <div class="rounded-xl bg-container shadow-xs border border-alpha-black-25 p-4">
-        <h4 class="text-secondary text-sm">Starting Value</h4>
-        <p class="text-xl font-medium text-primary"><%= format_money Money.new(meta[:starting_value] || 0, @scenario.family.currency) %></p>
+        <h4 class="text-secondary text-sm">Starting Savings</h4>
+        <p class="text-xl font-medium text-primary"><%= format_money Money.new(initial_savings, @scenario.family.currency) %></p>
       </div>
       <div class="rounded-xl bg-container shadow-xs border border-alpha-black-25 p-4">
-        <h4 class="text-secondary text-sm">Median Final Value</h4>
+        <h4 class="text-secondary text-sm">Starting Investments</h4>
+        <p class="text-xl font-medium text-primary"><%= format_money Money.new(initial_investments, @scenario.family.currency) %></p>
+      </div>
+      <div class="rounded-xl bg-container shadow-xs border border-alpha-black-25 p-4">
+        <h4 class="text-secondary text-sm">Median Final (p50)</h4>
         <p class="text-xl font-medium text-primary"><%= format_money Money.new(meta[:median_final_value] || 0, @scenario.family.currency) %></p>
       </div>
       <div class="rounded-xl bg-container shadow-xs border border-alpha-black-25 p-4">
@@ -26,8 +36,9 @@
         <p class="text-xl font-medium text-primary"><%= format_money Money.new(meta[:worst_case_final_value] || 0, @scenario.family.currency) %></p>
       </div>
       <div class="rounded-xl bg-container shadow-xs border border-alpha-black-25 p-4">
-        <h4 class="text-secondary text-sm">Best Case (p90)</h4>
-        <p class="text-xl font-medium text-primary"><%= format_money Money.new(meta[:best_case_final_value] || 0, @scenario.family.currency) %></p>
+        <h4 class="text-secondary text-sm">Target Savings</h4>
+        <p class="text-xl font-medium text-primary"><%= format_money Money.new(target_sav, @scenario.family.currency) %></p>
+        <p class="text-[10px] text-subdued">per person at age <%= @scenario.target_age %></p>
       </div>
     </div>
 
@@ -85,31 +96,32 @@
 
     <!-- Percentile Table at Key Ages -->
     <% if @chart_data[:confidence_bands].any? %>
+      <%
+        bands = @chart_data[:confidence_bands]
+        savings_pcts = @scenario.monte_carlo_results.dig("savings_percentiles") || {}
+        key_indices = (0...bands.size).select { |i| bands[i][:year] % 5 == 0 || i == bands.size - 1 }.uniq
+      %>
       <section class="bg-container shadow-border-xs rounded-xl overflow-hidden">
         <div class="p-4">
-          <h3 class="text-sm font-medium text-secondary">Portfolio Value at Key Years</h3>
+          <h3 class="text-sm font-medium text-secondary">Total Portfolio at Key Years</h3>
         </div>
         <div class="hidden md:grid grid-cols-12 bg-container-inset px-5 py-2 text-xs uppercase font-medium text-secondary">
           <p class="col-span-2">Year</p>
-          <p class="col-span-2">Pessimistic (p10)</p>
-          <p class="col-span-2">Conservative (p25)</p>
-          <p class="col-span-2">Median (p50)</p>
-          <p class="col-span-2">Optimistic (p75)</p>
-          <p class="col-span-2">Best Case (p90)</p>
+          <p class="col-span-2">Pessimistic</p>
+          <p class="col-span-2">Median</p>
+          <p class="col-span-2">Optimistic</p>
+          <p class="col-span-2">Savings (p50)</p>
+          <p class="col-span-2">Best Case</p>
         </div>
-        <%
-          bands = @chart_data[:confidence_bands]
-          # Show every 5 years + last year
-          key_indices = (0...bands.size).select { |i| bands[i][:year] % 5 == 0 || i == bands.size - 1 }.uniq
-        %>
         <% key_indices.each do |i| %>
           <% band = bands[i] %>
+          <% savings_p50 = savings_pcts.dig("p50", i) || 0 %>
           <div class="grid grid-cols-2 md:grid-cols-12 px-5 py-2 border-t border-divider text-sm">
             <p class="col-span-2 font-medium text-primary">Year <%= band[:year] %></p>
             <p class="col-span-2 text-secondary"><%= format_money Money.new(band[:p10], @scenario.family.currency) %></p>
-            <p class="col-span-2 text-secondary"><%= format_money Money.new(band[:p25], @scenario.family.currency) %></p>
             <p class="col-span-2 text-primary font-medium"><%= format_money Money.new(band[:p50], @scenario.family.currency) %></p>
-            <p class="col-span-2 text-secondary"><%= format_money Money.new(band[:p75], @scenario.family.currency) %></p>
+            <p class="col-span-2 text-secondary"><%= format_money Money.new(band[:p90], @scenario.family.currency) %></p>
+            <p class="col-span-2 <%= savings_p50.to_f >= (target_sav || 0).to_f ? 'text-green-600' : 'text-yellow-600' %>"><%= format_money Money.new(savings_p50, @scenario.family.currency) %></p>
             <p class="col-span-2 text-secondary"><%= format_money Money.new(band[:p90], @scenario.family.currency) %></p>
           </div>
         <% end %>

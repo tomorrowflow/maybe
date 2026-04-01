@@ -27,7 +27,10 @@
             end
           %>
           <p class="text-4xl font-bold <%= color_class %>">~<%= rate %>%</p>
-          <p class="text-sm text-secondary">chance your money lasts until age <%= scenario.target_age %></p>
+          <p class="text-sm text-secondary">
+            chance your money lasts until age <%= scenario.target_age %>
+            with >= <%= format_money Money.new(scenario.monte_carlo_results.dig("target_savings") || Setting.retirement_target_savings, scenario.family.currency) %> in savings
+          </p>
         </div>
       </div>
 
@@ -55,6 +58,15 @@
            style="width: <%= [rate, 100].min %>%">
       </div>
     </div>
+
+    <!-- Savings pool info -->
+    <% savings_depletion = scenario.monte_carlo_results.dig("median_savings_depletion_year") %>
+    <% if savings_depletion %>
+      <div class="flex items-center gap-2 text-sm text-yellow-600">
+        <%= icon("alert-triangle", size: "sm") %>
+        <span>Savings typically run out after ~<%= savings_depletion.round(0) %> years — investments cover the rest</span>
+      </div>
+    <% end %>
 
     <% if rate < 80 %>
       <p class="text-sm text-secondary">

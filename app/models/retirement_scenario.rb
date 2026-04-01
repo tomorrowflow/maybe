@@ -61,6 +61,7 @@ class RetirementScenario < ApplicationRecord
     update_columns(monte_carlo_status: "running")
 
     self.current_portfolio_value = scoped_portfolio_value
+    self.current_savings_value = scoped_savings_value
     self.total_pension_income = calculate_total_pension_income
 
     engine = RetirementScenario::MonteCarloEngine.new(self)
@@ -72,6 +73,7 @@ class RetirementScenario < ApplicationRecord
       monte_carlo_ran_at: Time.current,
       monte_carlo_status: "completed",
       current_portfolio_value: current_portfolio_value,
+      current_savings_value: current_savings_value,
       total_pension_income: total_pension_income
     )
 
@@ -251,6 +253,32 @@ class RetirementScenario < ApplicationRecord
     else
       family.accounts.active
     end
+  end
+
+  # Savings pool: depository accounts (checking, savings, fixed deposit, call money)
+  def scoped_savings_value
+    scoped_accounts.where(accountable_type: "Depository").sum(:balance).to_f
+  end
+
+  # Investment pool: everything liquid except properties and depositories
+  # Properties are illiquid wealth — shown separately but not drawn from
+  def scoped_investment_value
+    liquid_types = %w[Investment Crypto BausparContract PrivateLoan OtherAsset]
+    scoped_accounts.where(accountable_type: liquid_types).sum(:balance).to_f
+  end
+
+  # Illiquid wealth (properties) — shown as reference, not part of simulation pools
+  def scoped_illiquid_value
+    scoped_accounts.where(accountable_type: "Property").sum(:balance).to_f
+  end
+
+  # Weighted average interest rate across depository accounts
+  def weighted_savings_rate
+    accounts = scoped_accounts.where(accountable_type: "Depository").includes(:accountable).to_a
+    total = accounts.sum { |a| a.balance.to_f }
+    return 1.0 if total <= 0
+    weighted = accounts.sum { |a| a.balance.to_f * (a.accountable.interest_rate || 1.0) }
+    weighted / total
   end
 
   # ========================================

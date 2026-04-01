@@ -82,6 +82,7 @@ export default class extends Controller {
     this._drawGapPeriodHighlight();
     this._drawStackedAreas();
     this._drawExpensesLine();
+    this._drawSavingsLine();
     this._drawMilestoneMarkers();
     this._drawAxes();
     this._drawLegend();
@@ -176,6 +177,77 @@ export default class extends Controller {
       .attr("class", "expenses-line")
       .attr("fill", "none")
       .attr("stroke", "#EF4444")
+      .attr("stroke-width", 2)
+      .attr("stroke-dasharray", "6,4")
+      .attr("d", line);
+  }
+
+  _drawSavingsLine() {
+    const savingsData = this.dataValue.savings_line;
+    if (!savingsData || savingsData.length === 0) return;
+
+    const lineData = savingsData.map((d) => ({
+      date: parseLocalDate(d.date),
+      value: d.value,
+    })).filter(d => d.date != null);
+
+    if (lineData.length < 2) return;
+
+    // Secondary y-axis scale for savings (right side)
+    const maxSavings = d3.max(lineData, (d) => d.value) || 1;
+    const savingsScale = d3.scaleLinear()
+      .domain([0, maxSavings * 1.1])
+      .range([this._d3ContainerHeight, 0]);
+
+    const line = d3.line()
+      .x((d) => this._d3XScale(d.date))
+      .y((d) => savingsScale(d.value))
+      .curve(d3.curveMonotoneX);
+
+    // Draw savings area (light fill)
+    const area = d3.area()
+      .x((d) => this._d3XScale(d.date))
+      .y0(this._d3ContainerHeight)
+      .y1((d) => savingsScale(d.value))
+      .curve(d3.curveMonotoneX);
+
+    this._d3Group
+      .append("path")
+      .datum(lineData)
+      .attr("class", "savings-area")
+      .attr("fill", "rgba(16, 185, 129, 0.08)")
+      .attr("d", area);
+
+    // Draw savings line
+    this._d3Group
+      .append("path")
+      .datum(lineData)
+      .attr("class", "savings-line")
+      .attr("fill", "none")
+      .attr("stroke", "#10B981")
+      .attr("stroke-width", 2)
+      .attr("d", line);
+
+    // Right y-axis for savings
+    const rightAxis = this._d3Group.append("g")
+      .attr("transform", `translate(${this._d3ContainerWidth}, 0)`)
+      .call(d3.axisRight(savingsScale).ticks(4).tickFormat((d) => this._formatCurrency(d)));
+
+    rightAxis.select(".domain").attr("stroke", "#10B981").attr("opacity", 0.3);
+    rightAxis.selectAll(".tick line").attr("stroke", "#10B981").attr("opacity", 0.3);
+    rightAxis.selectAll(".tick text")
+      .attr("fill", "#10B981")
+      .style("font-size", "10px");
+
+    // Store savings scale for tooltip
+    this._savingsScale = savingsScale;
+    this._savingsData = lineData;
+  }
+
+  // Placeholder to prevent the original expenses line from drawing twice
+  _drawExpensesLineOriginal() {
+    // This method exists only to maintain the pattern
+  }
       .attr("stroke-width", 2)
       .attr("stroke-dasharray", "6,4")
       .attr("d", line);
@@ -317,6 +389,7 @@ export default class extends Controller {
       { key: "private_pensions", label: "Pensions" },
       { key: "other", label: "Part-time Work" },
       { key: "expenses", label: "Expenses", isDashed: true },
+      { key: "savings", label: "Savings (right axis)", color: "#10B981" },
     ];
 
     const legend = this._d3Svg
@@ -336,7 +409,7 @@ export default class extends Controller {
       .attr("width", 12)
       .attr("height", (d) => (d.isDashed ? 2 : 12))
       .attr("y", (d) => (d.isDashed ? 5 : 0))
-      .attr("fill", (d) => (d.key === "expenses" ? "#EF4444" : this._colors[d.key]));
+      .attr("fill", (d) => d.color || (d.key === "expenses" ? "#EF4444" : this._colors[d.key]));
 
     legendItems
       .append("text")
@@ -375,12 +448,19 @@ export default class extends Controller {
         const i = bisectDate(series.salary, x0.toISOString().split("T")[0], 1);
         const idx = Math.min(Math.max(i - 1, 0), series.salary.length - 1);
 
+        // Find savings value at this date (yearly data, find nearest year)
+        const savingsLine = this.dataValue.savings_line || [];
+        const monthIndex = idx;
+        const yearIndex = Math.round(monthIndex / 12);
+        const savingsValue = savingsLine[yearIndex]?.value || 0;
+
         const d = {
           date: series.salary[idx].date,
           salary: series.salary[idx]?.value || 0,
           private_pensions: series.private_pensions[idx]?.value || 0,
           other: series.other[idx]?.value || 0,
           expenses: this.dataValue.expenses_line[idx]?.value || 0,
+          savings: savingsValue,
         };
 
         const totalIncome = d.salary + d.private_pensions + d.other;
@@ -480,6 +560,15 @@ export default class extends Controller {
       `<strong style="color: ${surplusColor};">${surplus >= 0 ? "Surplus" : "Deficit"}</strong>`,
       `<strong style="color: ${surplusColor};">${surplusSign}${symbol}${this._formatNumber(surplus)}</strong>`
     );
+
+    // Savings balance
+    if (d.savings > 0) {
+      html += separator;
+      html += row(null,
+        `<span style="color: #10B981;">Savings Balance</span>`,
+        `<span style="color: #10B981; font-weight: 600;">${symbol}${this._formatNumber(d.savings)}</span>`
+      );
+    }
 
     // Milestones near this date
     if (milestones.length > 0) {

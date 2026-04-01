@@ -17,6 +17,7 @@ class RetirementScenario
       {
         optimal_retirement: analyze_retirement_dates,
         cashout_timing: analyze_cashout_products,
+        savings_gap_coverage: analyze_savings_gap_coverage,
         target_probability: 80
       }
     end
@@ -161,6 +162,48 @@ class RetirementScenario
       # Delegates to the scenario's unified lookup.
       def find_monthly_contribution_for(account)
         scenario.find_linked_contribution_for(account)
+      end
+
+      # Analyze whether projected savings can bridge income gaps for each person
+      def analyze_savings_gap_coverage
+        persons = scenario.retirement_scenario_persons.includes(:person).to_a
+        return [] if persons.empty?
+
+        persons.filter_map do |rsp|
+          next unless rsp.salary_end_date
+
+          # Find gap: salary end → earliest pension/income start
+          pension_dates = []
+          pension_dates << rsp.state_pension_start_date if rsp.state_pension_start_date
+          pension_dates << rsp.post_retirement_income_start_date if rsp.post_retirement_income_start_date
+          scenario.pension_sources.with_payout.each { |ps| pension_dates << ps.payout_start_date if ps.payout_start_date }
+
+          gap_end = pension_dates.compact.min
+          next unless gap_end && gap_end > rsp.salary_end_date
+
+          gap_months = ((gap_end - rsp.salary_end_date).to_f / 30.44).ceil
+          monthly_expenses = (scenario.retirement_monthly_expenses || 0).to_f
+          gap_cost = gap_months * monthly_expenses
+
+          # Run quick sim to get median savings at gap start
+          engine = MonteCarloEngine.new(scenario, overrides: { simulation_count: ANALYSIS_SIMULATIONS })
+          result = engine.run
+
+          gap_start_year = ((rsp.salary_end_date - (scenario.calculation_date || Date.today)).to_f / 365.25).round
+          gap_start_year = [ gap_start_year, 0 ].max
+          savings_at_gap = result.dig(:savings_percentiles, "p50", gap_start_year) || 0
+
+          {
+            person_name: rsp.person.display_name,
+            gap_start: rsp.salary_end_date.to_s,
+            gap_end: gap_end.to_s,
+            gap_months: gap_months,
+            gap_cost: gap_cost.round(2),
+            median_savings_at_gap: savings_at_gap.round(2),
+            coverage_ratio: gap_cost > 0 ? (savings_at_gap / gap_cost * 100).round(1) : nil,
+            sufficient: savings_at_gap >= gap_cost
+          }
+        end
       end
 
       def build_recommendation(monthly_payout, projected_value, breakeven_months)
