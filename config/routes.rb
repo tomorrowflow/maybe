@@ -109,6 +109,7 @@ Rails.application.routes.draw do
       get :income_timeline
       get :portfolio
       get :sweet_spot
+      get :calculate_sweet_spot_year
     end
   end
 

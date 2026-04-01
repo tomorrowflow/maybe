@@ -1,10 +1,12 @@
 class RetirementScenario
-  # Analyzes optimal timing for pension cashouts, retirement dates,
-  # and hold-vs-cashout decisions by running Monte Carlo simulations
-  # across a range of dates.
+  # Analyzes optimal timing for retirement and pension cashouts.
+  # For each person, tests retirement dates centered around the first feasible date.
+  # Determines which contracts to cash out to cover the income gap while keeping
+  # savings above the target minimum.
   class SweetSpotAnalyzer
-    ANALYSIS_SIMULATIONS = 100 # Quick sims per data point
-    DATE_STEP_MONTHS = 12      # Test every 12 months
+    ANALYSIS_SIMULATIONS = 100
+    DATE_STEP_MONTHS = 12
+    TARGET_FEASIBILITY = 85 # Center the date range around this feasibility threshold
 
     attr_reader :scenario
 
@@ -12,210 +14,243 @@ class RetirementScenario
       @scenario = scenario
     end
 
-    # Full analysis: retirement date optimization + cashout timing for each product
     def analyze
       {
-        optimal_retirement: analyze_retirement_dates,
-        cashout_timing: analyze_cashout_products,
-        savings_gap_coverage: analyze_savings_gap_coverage,
-        target_probability: 80
+        per_person_strategies: analyze_per_person,
+        target_probability: TARGET_FEASIBILITY,
+        target_savings: target_minimum_savings,
+        scenario_type: scenario.scenario_type
       }
     end
 
     private
 
-      # Analyze each person's optimal retirement date independently
-      def analyze_retirement_dates
+      def target_minimum_savings
+        target = (Setting.retirement_target_savings || 50_000).to_f
+        person_count = [ scenario.retirement_scenario_persons.size, 1 ].max
+        # For joint/household: shared target, not multiplied
+        target
+      end
+
+      # Analyze each person independently
+      def analyze_per_person
         persons = scenario.retirement_scenario_persons.includes(:person).to_a
         return [] if persons.empty?
 
-        persons.filter_map { |person| analyze_person_retirement(person) }
+        cashable_contracts = load_cashable_contracts
+
+        persons.filter_map do |rsp|
+          analyze_person(rsp, cashable_contracts, persons)
+        end
       end
 
-      def analyze_person_retirement(rsp)
+      def analyze_person(rsp, cashable_contracts, all_persons)
         base_date = rsp.salary_end_date
         return nil unless base_date
 
-        results = []
-        test_date = [ base_date - 3.years, Date.today + 1.year ].max
-        end_date = base_date + 5.years
+        pension_start = find_pension_start_for_person(rsp)
 
-        while test_date <= end_date
-          overrides = {
-            person_retirement_dates: { rsp.id.to_s => test_date },
-            simulation_count: ANALYSIS_SIMULATIONS
-          }
+        # Center date: user's preferred retirement date
+        center_date = base_date
 
-          engine = MonteCarloEngine.new(scenario, overrides: overrides)
-          result = engine.run
+        # Calculate 9 years: 4 before center + center + 4 after center
+        # Bounded by: earliest = next year, latest = official retirement date
+        earliest = Date.new(Date.today.year + 1, Date.today.month, 1)
+        latest = base_date
 
-          results << {
-            date: test_date.to_s,
-            label: test_date.strftime("%b %Y"),
-            success_rate: result[:success_rate],
-            years_from_now: ((test_date - Date.today).to_f / 365.25).round(1)
-          }
-
-          test_date += DATE_STEP_MONTHS.months
+        strategies = []
+        (-4..4).each do |offset|
+          test_date = center_date + offset.years
+          next if test_date < earliest
+          next if test_date > latest + 1.year # Allow 1 year past official date
+          strategy = build_strategy_for_date(rsp, test_date, pension_start, cashable_contracts, all_persons)
+          strategies << strategy if strategy
         end
 
-        sweet_spot = results.find { |r| r[:success_rate] >= 80 }
+        sweet_spot = strategies.find { |s| s[:feasible] && s[:success_rate] >= TARGET_FEASIBILITY }
 
         {
           person_id: rsp.id.to_s,
           person_name: rsp.person.display_name,
-          current_date: base_date.to_s,
-          data_points: results,
+          current_planned_date: base_date.to_s,
           sweet_spot: sweet_spot,
-          best_result: results.max_by { |r| r[:success_rate] }
+          strategies: strategies,
+          center_index: strategies.index { |s| s[:date] == center_date.to_s } || (strategies.size / 2),
+          earliest_year: earliest.year,
+          latest_year: latest.year
         }
       end
 
-      # For each cashable pension product, compare hold vs early cashout
-      def analyze_cashout_products
-        cashable_accounts = scenario.family.accounts.active
-          .where(accountable_type: "Investment")
-          .includes(:accountable)
-          .select { |a| a.accountable.respond_to?(:allows_early_cashout?) && a.accountable.allows_early_cashout? }
+      # Calculate a single year's strategy (called on-demand from controller)
+      def self.calculate_single_year(scenario, person_id, year)
+        rsp = scenario.retirement_scenario_persons.includes(:person).find(person_id)
+        analyzer = new(scenario)
+        pension_start = analyzer.send(:find_pension_start_for_person, rsp)
+        cashable_contracts = analyzer.send(:load_cashable_contracts)
+        all_persons = scenario.retirement_scenario_persons.includes(:person).to_a
 
-        return [] if cashable_accounts.empty?
-
-        cashable_accounts.map do |account|
-          analyze_single_product(account)
-        end.compact
+        test_date = Date.new(year, rsp.salary_end_date&.month || 1, rsp.salary_end_date&.day || 1)
+        analyzer.send(:build_strategy_for_date, rsp, test_date, pension_start, cashable_contracts, all_persons)
       end
 
-      def analyze_single_product(account)
-        investment = account.accountable
-        retirement_date = investment.retirement_date
-        return nil unless retirement_date
+      # Quick scan to find the first feasible retirement date
+      def find_first_feasible_date(rsp, base_date, pension_start, cashable_contracts, all_persons)
+        test_date = Date.new(Date.today.year + 1, Date.today.month, 1)
+        end_date = base_date # Official retirement date is the maximum
 
-        # Look up monthly contribution from linked payments
-        monthly_contribution = find_monthly_contribution_for(account)
-        growth_rate = scenario.portfolio_growth_rate || 7.0
-
-        results = []
-
-        # Test cashout at various dates from now to retirement
-        test_date = [ Date.today + 1.year, Date.today ].max
-        while test_date <= retirement_date + 2.years
-          projected_value = investment.projected_value_at(
-            test_date,
-            fallback_growth_rate: growth_rate,
-            monthly_contribution: monthly_contribution,
-            contribution_end_date: test_date # Contributions stop at cashout
-          )
-
-          results << {
-            date: test_date.to_s,
-            label: test_date.strftime("%b %Y"),
-            projected_value: projected_value.round(2),
-            years_from_now: ((test_date - Date.today).to_f / 365.25).round(1)
-          }
-
+        while test_date <= end_date
+          strategy = build_strategy_for_date(rsp, test_date, pension_start, cashable_contracts, all_persons)
+          return test_date if strategy && strategy[:feasible] && strategy[:success_rate] >= TARGET_FEASIBILITY
           test_date += DATE_STEP_MONTHS.months
         end
 
-        # Compare: hold until retirement (monthly pension) vs cash out (lump sum)
-        monthly_payout = investment.expected_monthly_payout || 0
-        surrender_value = investment.surrender_value || 0
-        projected_at_retirement = investment.projected_value_at(
-          retirement_date,
-          fallback_growth_rate: growth_rate,
-          monthly_contribution: monthly_contribution,
-          contribution_end_date: retirement_date
-        )
+        nil
+      end
 
-        # Calculate breakeven: how many months of pension to equal lump sum
-        breakeven_months = monthly_payout > 0 ? (projected_at_retirement / monthly_payout).ceil : nil
+      def find_pension_start_for_person(rsp)
+        dates = []
+        dates << rsp.state_pension_start_date if rsp.state_pension_start_date
+        dates << rsp.person.estimated_retirement_date if rsp.person.respond_to?(:estimated_retirement_date) && rsp.person.estimated_retirement_date
 
-        # Find the pension source ID for this account (for explorer pre-fill)
-        pension_source = scenario.pension_sources.find_by(account_id: account.id)
-
-        # Recommended cashout date: if cashing out, use earliest sweet spot retirement date
-        # (that's when you'd stop contributing and need the capital)
-        recommended_cashout_date = if results.any?
-          best_point = results.max_by { |r| r[:projected_value] }
-          best_point[:date]
+        # Also include pension sources (shared in joint scenarios)
+        scenario.pension_sources.with_payout.each do |ps|
+          dates << ps.payout_start_date if ps.payout_start_date
         end
 
+        dates.compact.min
+      end
+
+      def build_strategy_for_date(rsp, retirement_date, pension_start, cashable_contracts, all_persons)
+        # Gap calculation
+        gap_end = pension_start
+        if gap_end.nil? || gap_end <= retirement_date
+          gap_months = 0
+          gap_cost = 0
+        else
+          gap_months = ((gap_end - retirement_date).to_f / 30.44).ceil
+          gap_cost = gap_months * monthly_expenses
+        end
+
+        required_total = gap_cost + target_minimum_savings
+
+        # Run Monte Carlo with this person's retirement date overridden
+        overrides = {
+          person_retirement_dates: { rsp.id.to_s => retirement_date },
+          simulation_count: ANALYSIS_SIMULATIONS
+        }
+        engine = MonteCarloEngine.new(scenario, overrides: overrides)
+        mc_result = engine.run
+
+        retirement_year = ((retirement_date - (scenario.calculation_date || Date.today)).to_f / 365.25).round
+        retirement_year = [ retirement_year, 0 ].max
+        projected_savings = mc_result.dig(:savings_percentiles, "p50", retirement_year) || 0
+
+        shortfall = required_total - projected_savings
+
+        # Build cashout plan if there's a shortfall
+        cashout_plan = []
+        total_cashout = 0
+        total_lost_pension = 0
+
+        if shortfall > 0
+          cashout_plan = optimize_cashouts(cashable_contracts, retirement_date, shortfall)
+          total_cashout = cashout_plan.sum { |c| c[:cashout_value] }
+          total_lost_pension = cashout_plan.sum { |c| c[:lost_monthly_payout] }
+        end
+
+        savings_after_gap = projected_savings + total_cashout - gap_cost
+        feasible = savings_after_gap >= target_minimum_savings
+
         {
-          account_name: account.name,
-          account_id: account.id,
-          pension_source_id: pension_source&.id&.to_s,
-          subtype: account.subtype,
-          recommended_cashout_date: recommended_cashout_date,
-          current_value: account.balance.to_f.round(2),
-          monthly_contribution: monthly_contribution.to_f.round(2),
-          surrender_value: surrender_value.to_f.round(2),
-          retirement_date: retirement_date.to_s,
-          monthly_payout: monthly_payout.to_f.round(2),
-          projected_at_retirement: projected_at_retirement.round(2),
-          breakeven_months: breakeven_months,
-          breakeven_years: breakeven_months ? (breakeven_months / 12.0).round(1) : nil,
-          data_points: results,
-          recommendation: build_recommendation(monthly_payout, projected_at_retirement, breakeven_months)
+          date: retirement_date.to_s,
+          label: retirement_date.strftime("%b %Y"),
+          years_from_now: ((retirement_date - Date.today).to_f / 365.25).round(1),
+          success_rate: mc_result[:success_rate],
+          gap_months: gap_months,
+          gap_cost: gap_cost.round(2),
+          projected_savings: projected_savings.round(2),
+          shortfall: [ shortfall, 0 ].max.round(2),
+          cashout_plan: cashout_plan,
+          total_cashout: total_cashout.round(2),
+          total_lost_pension: total_lost_pension.round(2),
+          savings_after_gap: savings_after_gap.round(2),
+          feasible: feasible
         }
       end
 
-      # Find the monthly contribution for this account.
-      # Delegates to the scenario's unified lookup.
-      def find_monthly_contribution_for(account)
-        scenario.find_linked_contribution_for(account)
-      end
+      def optimize_cashouts(contracts, cashout_date, shortfall)
+        remaining = shortfall
+        selected = []
 
-      # Analyze whether projected savings can bridge income gaps for each person
-      def analyze_savings_gap_coverage
-        persons = scenario.retirement_scenario_persons.includes(:person).to_a
-        return [] if persons.empty?
+        sorted = contracts.sort_by { |c| c[:monthly_payout] }
 
-        persons.filter_map do |rsp|
-          next unless rsp.salary_end_date
+        sorted.each do |contract|
+          break if remaining <= 0
 
-          # Find gap: salary end → earliest pension/income start
-          pension_dates = []
-          pension_dates << rsp.state_pension_start_date if rsp.state_pension_start_date
-          pension_dates << rsp.post_retirement_income_start_date if rsp.post_retirement_income_start_date
-          scenario.pension_sources.with_payout.each { |ps| pension_dates << ps.payout_start_date if ps.payout_start_date }
+          cashout_value = contract_cashout_value(contract, cashout_date)
+          next if cashout_value <= 0
 
-          gap_end = pension_dates.compact.min
-          next unless gap_end && gap_end > rsp.salary_end_date
-
-          gap_months = ((gap_end - rsp.salary_end_date).to_f / 30.44).ceil
-          monthly_expenses = (scenario.retirement_monthly_expenses || 0).to_f
-          gap_cost = gap_months * monthly_expenses
-
-          # Run quick sim to get median savings at gap start
-          engine = MonteCarloEngine.new(scenario, overrides: { simulation_count: ANALYSIS_SIMULATIONS })
-          result = engine.run
-
-          gap_start_year = ((rsp.salary_end_date - (scenario.calculation_date || Date.today)).to_f / 365.25).round
-          gap_start_year = [ gap_start_year, 0 ].max
-          savings_at_gap = result.dig(:savings_percentiles, "p50", gap_start_year) || 0
-
-          {
-            person_name: rsp.person.display_name,
-            gap_start: rsp.salary_end_date.to_s,
-            gap_end: gap_end.to_s,
-            gap_months: gap_months,
-            gap_cost: gap_cost.round(2),
-            median_savings_at_gap: savings_at_gap.round(2),
-            coverage_ratio: gap_cost > 0 ? (savings_at_gap / gap_cost * 100).round(1) : nil,
-            sufficient: savings_at_gap >= gap_cost
+          selected << {
+            account_name: contract[:account_name],
+            account_id: contract[:account_id],
+            pension_source_id: contract[:pension_source_id],
+            cashout_value: cashout_value.round(2),
+            lost_monthly_payout: contract[:monthly_payout],
+            cashout_date: (contract[:early_cashout_date] || cashout_date).to_s,
+            subtype: contract[:subtype]
           }
+
+          remaining -= cashout_value
         end
+
+        selected
       end
 
-      def build_recommendation(monthly_payout, projected_value, breakeven_months)
-        if monthly_payout <= 0
-          { action: :cash_out, reason: "No monthly payout configured — lump sum is the only option" }
-        elsif breakeven_months && breakeven_months > 300 # 25+ years
-          { action: :cash_out, reason: "Breakeven takes #{(breakeven_months / 12.0).round(1)} years — lump sum invested may perform better" }
-        elsif breakeven_months && breakeven_months < 120 # Under 10 years
-          { action: :hold, reason: "Monthly pension breaks even in #{(breakeven_months / 12.0).round(1)} years — holding is likely better" }
-        else
-          { action: :depends, reason: "Breakeven in #{(breakeven_months / 12.0).round(1)} years — depends on your investment returns and life expectancy" }
+      def contract_cashout_value(contract, date)
+        if contract[:has_surrender_value] && contract[:surrender_value].to_f > 0
+          return contract[:surrender_value].to_f
         end
+
+        investment = contract[:investment]
+        return 0 unless investment
+
+        contribution = scenario.find_linked_contribution_for(contract[:account]) rescue 0
+        investment.projected_value_at(
+          contract[:early_cashout_date] || date,
+          fallback_growth_rate: scenario.portfolio_growth_rate || 7.0,
+          monthly_contribution: contribution,
+          contribution_end_date: contract[:early_cashout_date] || date
+        )
+      end
+
+      def load_cashable_contracts
+        scenario.family.accounts.active
+          .where(accountable_type: "Investment")
+          .includes(:accountable)
+          .select { |a| a.accountable.respond_to?(:allows_early_cashout?) && a.accountable.allows_early_cashout? }
+          .map { |account|
+            inv = account.accountable
+            pension_source = scenario.pension_sources.find_by(account_id: account.id)
+            {
+              account: account,
+              account_name: account.name,
+              account_id: account.id,
+              pension_source_id: pension_source&.id&.to_s,
+              subtype: account.subtype,
+              investment: inv,
+              current_value: account.balance.to_f,
+              monthly_payout: (inv.expected_monthly_payout || 0).to_f,
+              surrender_value: (inv.surrender_value || 0).to_f,
+              has_surrender_value: inv.has_surrender_value,
+              early_cashout_date: inv.early_cashout_date,
+              retirement_date: inv.retirement_date,
+              monthly_contribution: (inv.monthly_contribution || 0).to_f
+            }
+          }
+      end
+
+      def monthly_expenses
+        (scenario.retirement_monthly_expenses || 0).to_f
       end
   end
 end

@@ -2,7 +2,7 @@ class RetirementScenariosController < ApplicationController
   before_action :set_scenario, only: [
     :show, :edit, :update, :destroy,
     :simulate, :explore, :apply_exploration,
-    :snapshots, :income_timeline, :portfolio, :sweet_spot
+    :snapshots, :income_timeline, :portfolio, :sweet_spot, :calculate_sweet_spot_year
   ]
 
   WIZARD_STEPS = %w[basics cashflow income portfolio].freeze
@@ -117,6 +117,16 @@ class RetirementScenariosController < ApplicationController
       @scenario.enqueue_income_timeline!
     end
     @chart_data = @scenario.parsed_income_timeline_results
+  end
+
+  # On-demand single year calculation for sweet spot sliding window
+  def calculate_sweet_spot_year
+    year = params[:year].to_i
+    person_id = params[:person_id]
+
+    result = RetirementScenario::SweetSpotAnalyzer.calculate_single_year(@scenario, person_id, year)
+
+    render json: result || { error: "Could not calculate" }
   end
 
   # Portfolio projection page
