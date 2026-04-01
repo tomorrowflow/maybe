@@ -102,29 +102,63 @@ class Investment < ApplicationRecord
     early_cashout_date || retirement_date
   end
 
-  # Projected value at a future date, using growth rate
-  def projected_value_at(date, fallback_growth_rate: 7.0)
+  # Projected value at a future date, using growth rate and optional monthly contributions
+  # monthly_contribution: amount paid into the contract each month (increases value over time)
+  # contribution_end_date: when contributions stop (e.g., retirement or cashout date)
+  def projected_value_at(date, fallback_growth_rate: 7.0, monthly_contribution: 0, contribution_end_date: nil)
     return 0 unless account&.balance.present?
 
     current = account.balance.to_f
     return current if current <= 0
 
-    years = ((date - Date.current).to_f / 365.25)
-    return current if years <= 0
+    months = ((date - Date.current).to_f / 365.25 * 12).round
+    return current if months <= 0
 
-    rate = (expected_growth_rate || fallback_growth_rate).to_f / 100.0
-    current * ((1 + rate) ** years)
+    rate = (expected_growth_rate || fallback_growth_rate).to_f
+
+    if monthly_contribution.to_f > 0
+      # Months during which contributions are made
+      if contribution_end_date && contribution_end_date < date
+        contrib_months = ((contribution_end_date - Date.current).to_f / 365.25 * 12).round.clamp(0, months)
+      else
+        contrib_months = months
+      end
+
+      # Phase 1: growth with contributions
+      result = RetirementScenario::InterestCalculator.future_value_with_contributions(
+        principal: current,
+        annual_rate: rate,
+        monthly_contribution: monthly_contribution.to_f,
+        months: contrib_months
+      )
+
+      # Phase 2: growth without contributions (if contributions end before target date)
+      remaining_months = months - contrib_months
+      if remaining_months > 0
+        RetirementScenario::InterestCalculator.compound_interest(
+          principal: result[:final_balance],
+          annual_rate: rate,
+          years: remaining_months / 12.0
+        )
+      else
+        result[:final_balance]
+      end
+    else
+      # No contributions — pure compound growth
+      rate_decimal = rate / 100.0
+      current * ((1 + rate_decimal) ** (months / 12.0))
+    end
   end
 
   # Projected cashout amount at the effective cashout date
-  def projected_cashout_amount(fallback_growth_rate: 7.0)
+  def projected_cashout_amount(fallback_growth_rate: 7.0, monthly_contribution: 0)
     date = effective_cashout_date
     return 0 unless date.present?
 
     if has_surrender_value && surrender_value.present?
       surrender_value.to_f
     else
-      projected_value_at(date, fallback_growth_rate: fallback_growth_rate)
+      projected_value_at(date, fallback_growth_rate: fallback_growth_rate, monthly_contribution: monthly_contribution)
     end
   end
 end

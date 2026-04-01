@@ -2,17 +2,27 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["expenseInput", "contributionInput", "targetAgeInput", "growthRateInput",
+                     "personDate", "pensionDate",
                      "applyButton", "loadingIndicator", "results", "exploredRate"]
   static values = {
     url: String,
     applyUrl: String,
-    debounce: { type: Number, default: 600 }
+    debounce: { type: Number, default: 600 },
+    autoExplore: { type: Boolean, default: false }
   }
 
   connect() {
     this._timeout = null
     this._abortController = null
     this._initialValues = this._captureCurrentValues()
+
+    // When pre-filled from sweet spot, the initial values were captured from the
+    // overridden inputs. Reset baseline to empty so changes are detected, then auto-explore.
+    if (this.autoExploreValue) {
+      this._initialValues = "{}"
+      this._toggleApplyButton()
+      setTimeout(() => this._explore(), 500)
+    }
   }
 
   disconnect() {
@@ -25,12 +35,10 @@ export default class extends Controller {
   }
 
   apply() {
-    // Submit as form to apply_exploration endpoint
     const form = document.createElement("form")
     form.method = "POST"
     form.action = this.applyUrlValue
 
-    // CSRF token
     const csrfToken = document.querySelector("meta[name='csrf-token']")?.content
     if (csrfToken) {
       const tokenInput = document.createElement("input")
@@ -40,14 +48,13 @@ export default class extends Controller {
       form.appendChild(tokenInput)
     }
 
-    // Method override for PATCH
     const methodInput = document.createElement("input")
     methodInput.type = "hidden"
     methodInput.name = "_method"
     methodInput.value = "patch"
     form.appendChild(methodInput)
 
-    // Add current values
+    // Add all params as hidden fields
     const params = this._collectParams()
     for (const [key, value] of Object.entries(params)) {
       const input = document.createElement("input")
@@ -76,7 +83,13 @@ export default class extends Controller {
     this._showLoading()
     this._showResults()
 
-    const params = new URLSearchParams(this._collectParams())
+    const params = new URLSearchParams()
+
+    // Flat params
+    const collected = this._collectParams()
+    for (const [key, value] of Object.entries(collected)) {
+      params.append(key, value)
+    }
 
     try {
       const response = await fetch(`${this.urlValue}?${params.toString()}`, {
@@ -106,6 +119,23 @@ export default class extends Controller {
     if (this.hasContributionInputTarget) params.monthly_contribution = this.contributionInputTarget.value
     if (this.hasTargetAgeInputTarget) params.target_age = this.targetAgeInputTarget.value
     if (this.hasGrowthRateInputTarget) params.portfolio_growth_rate = this.growthRateInputTarget.value
+
+    // Per-person retirement dates
+    this.personDateTargets.forEach(input => {
+      const personId = input.dataset.personId
+      if (personId && input.value) {
+        params[`person_retirement_dates[${personId}]`] = input.value
+      }
+    })
+
+    // Pension payout dates
+    this.pensionDateTargets.forEach(input => {
+      const pensionId = input.dataset.pensionId
+      if (pensionId && input.value) {
+        params[`pension_payout_dates[${pensionId}]`] = input.value
+      }
+    })
+
     return params
   }
 

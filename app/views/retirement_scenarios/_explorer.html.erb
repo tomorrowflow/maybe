@@ -1,8 +1,22 @@
 <%# locals: (scenario:) %>
+<%
+  # Check for pre-filled values from sweet spot analysis
+  from_sweet_spot = params[:from_sweet_spot] == "true" rescue false
+  person_date_overrides = params[:person_retirement_dates]&.to_unsafe_h || {}
+  pension_date_overrides = params[:pension_payout_dates]&.to_unsafe_h || {}
+%>
 <section class="bg-container shadow-border-xs rounded-xl p-4 space-y-4"
          data-controller="retirement-explorer"
          data-retirement-explorer-url-value="<%= explore_retirement_scenario_path(scenario) %>"
-         data-retirement-explorer-apply-url-value="<%= apply_exploration_retirement_scenario_path(scenario) %>">
+         data-retirement-explorer-apply-url-value="<%= apply_exploration_retirement_scenario_path(scenario) %>"
+         data-retirement-explorer-auto-explore-value="<%= from_sweet_spot %>">
+
+  <% if from_sweet_spot %>
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center gap-2 text-sm text-blue-800">
+      <%= icon("sparkles", size: "sm", class: "text-blue-600") %>
+      Sweet spot recommendations applied — review and adjust below, then click "Apply Changes" to save.
+    </div>
+  <% end %>
 
   <div class="flex items-center justify-between">
     <div>
@@ -16,6 +30,7 @@
     </button>
   </div>
 
+  <!-- Core Parameters -->
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <div class="form-field">
       <label class="form-field__label">Monthly Retirement Expenses</label>
@@ -53,6 +68,50 @@
              data-action="input->retirement-explorer#paramChanged">
     </div>
   </div>
+
+  <!-- Per-Person Retirement Dates -->
+  <% persons = scenario.retirement_scenario_persons.includes(:person) %>
+  <% if persons.any? %>
+    <div class="border-t border-divider pt-4 space-y-3">
+      <p class="text-sm font-medium text-primary">Retirement Dates</p>
+      <div class="grid grid-cols-1 md:grid-cols-<%= [persons.size, 3].min %> gap-4">
+        <% persons.each do |rsp| %>
+          <% override_date = person_date_overrides[rsp.id.to_s] %>
+          <div class="form-field <%= 'ring-2 ring-blue-300' if override_date %>">
+            <label class="form-field__label"><%= rsp.person.display_name %> stops working</label>
+            <input type="date"
+                   value="<%= override_date || rsp.salary_end_date&.iso8601 %>"
+                   class="form-field__input"
+                   data-retirement-explorer-target="personDate"
+                   data-person-id="<%= rsp.id %>"
+                   data-action="input->retirement-explorer#paramChanged">
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Pension Payout Dates -->
+  <% pensions = scenario.pension_sources.with_payout.includes(:account) %>
+  <% if pensions.any? %>
+    <div class="border-t border-divider pt-4 space-y-3">
+      <p class="text-sm font-medium text-primary">Pension Payout Start Dates</p>
+      <div class="grid grid-cols-1 md:grid-cols-<%= [pensions.size, 3].min %> gap-4">
+        <% pensions.each do |ps| %>
+          <% override_date = pension_date_overrides[ps.id.to_s] %>
+          <div class="form-field <%= 'ring-2 ring-blue-300' if override_date %>">
+            <label class="form-field__label"><%= ps.account.name %></label>
+            <input type="date"
+                   value="<%= override_date || ps.payout_start_date&.iso8601 %>"
+                   class="form-field__input"
+                   data-retirement-explorer-target="pensionDate"
+                   data-pension-id="<%= ps.id %>"
+                   data-action="input->retirement-explorer#paramChanged">
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
 
   <!-- Explored results area (updated via Turbo Stream) -->
   <div id="explore-results-<%= scenario.id %>" class="hidden border-t border-divider pt-4"

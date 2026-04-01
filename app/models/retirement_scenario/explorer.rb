@@ -27,6 +27,20 @@ class RetirementScenario
         overrides[:inflation_rate] = params[:inflation_rate].to_f if params[:inflation_rate].present?
         overrides[:target_age] = params[:target_age].to_i if params[:target_age].present?
 
+        # Per-person retirement date overrides: { person_rsp_id => "YYYY-MM-DD" }
+        if params[:person_retirement_dates].present?
+          overrides[:person_retirement_dates] = params[:person_retirement_dates].to_h.transform_values { |v|
+            v.present? ? Date.parse(v) : nil
+          }.compact
+        end
+
+        # Pension payout date overrides: { pension_source_id => "YYYY-MM-DD" }
+        if params[:pension_payout_dates].present?
+          overrides[:pension_payout_dates] = params[:pension_payout_dates].to_h.transform_values { |v|
+            v.present? ? Date.parse(v) : nil
+          }.compact
+        end
+
         overrides.compact
       end
   end

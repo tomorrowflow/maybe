@@ -76,15 +76,31 @@ class BausparContract < ApplicationRecord
     [ bs - savings, 0 ].max
   end
 
-  # Monthly payment during the Bauspar loan phase (annuity at the guaranteed loan rate)
+  # Monthly payment during the Bauspar loan phase
+  # If loan_monthly_repayment is set (Tilgungsbeitrag), use it as the fixed repayment
+  # and add the interest on top. Otherwise fall back to annuity calculation.
   # Returns a plain numeric value
   def bauspar_loan_monthly_payment
+    # If fixed repayment is defined, total payment = repayment + interest on remaining balance
+    # For simplicity, use the average interest over the loan term (interest on half the loan amount)
+    if loan_monthly_repayment.present? && loan_monthly_repayment.to_f > 0
+      loan_amount = available_loan_amount
+      return 0 if loan_amount <= 0
+
+      repayment = loan_monthly_repayment.to_f
+      rate = (loan_interest_rate || 0).to_f / 100.0 / 12.0
+
+      # Average monthly interest (decreases as principal is paid, so average = interest on half the loan)
+      avg_monthly_interest = loan_amount * rate / 2.0
+      return (repayment + avg_monthly_interest).round(2)
+    end
+
     return nil unless loan_interest_rate.present? && loan_interest_rate.to_f > 0 && bausparsumme.present?
 
     loan_amount = available_loan_amount
     return 0 if loan_amount <= 0
 
-    # Standard Bauspar loan term: typically ~10 years
+    # Fallback: annuity calculation with estimated 10 year term
     estimated_term = 120
 
     rate = loan_interest_rate.to_f
@@ -93,6 +109,34 @@ class BausparContract < ApplicationRecord
       loan_amount / estimated_term
     else
       (loan_amount * monthly_rate * (1 + monthly_rate)**estimated_term) / ((1 + monthly_rate)**estimated_term - 1)
+    end
+  end
+
+  # Loan term in months, calculated from fixed repayment amount
+  def bauspar_loan_term_months
+    loan_amount = available_loan_amount
+    return 120 if loan_amount <= 0 # default 10 years
+
+    if loan_monthly_repayment.present? && loan_monthly_repayment.to_f > 0
+      repayment = loan_monthly_repayment.to_f
+      # Simple: term = loan / repayment (interest extends it slightly)
+      rate = (loan_interest_rate || 0).to_f / 100.0 / 12.0
+      if rate > 0
+        # Iterative: simulate month by month
+        balance = loan_amount
+        months = 0
+        while balance > 0 && months < 600 # cap at 50 years
+          interest = balance * rate
+          balance = balance + interest - repayment
+          months += 1
+          break if repayment <= interest # Would never pay off
+        end
+        months
+      else
+        (loan_amount / repayment).ceil
+      end
+    else
+      120 # default 10 years
     end
   end
 

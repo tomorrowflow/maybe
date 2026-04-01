@@ -108,6 +108,7 @@ Rails.application.routes.draw do
       get :snapshots
       get :income_timeline
       get :portfolio
+      get :sweet_spot
     end
   end
 

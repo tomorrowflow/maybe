@@ -34,9 +34,11 @@
   <!-- Page Navigation -->
   <%= render "retirement_scenarios/page_nav", scenario: @scenario, active: :overview %>
 
+  <!-- Subscribe to family broadcasts for live updates -->
+  <%= turbo_stream_from @scenario.family %>
+
   <!-- Monte Carlo Results -->
   <div id="monte-carlo-results-<%= @scenario.id %>">
-    <%= turbo_stream_from @scenario.family %>
     <%= render "retirement_scenarios/monte_carlo_card", scenario: @scenario %>
   </div>
 

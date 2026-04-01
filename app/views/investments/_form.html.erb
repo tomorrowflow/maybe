@@ -55,9 +55,15 @@
                                               min: 0,
                                               step: 10 %>
           </div>
-          <p class="text-xs text-secondary mt-2">
-            These values will be used in retirement planning calculations.
-          </p>
+
+          <div class="mt-4">
+            <%= accountable_form.number_field :monthly_contribution,
+                                              label: "Monthly Contribution",
+                                              placeholder: "200",
+                                              min: 0,
+                                              step: 10,
+                                              helper_text: "Amount paid into this contract each month (including employer contributions). Used for projecting future value in retirement planning." %>
+          </div>
         </div>
 
         <div id="cashout-fields"

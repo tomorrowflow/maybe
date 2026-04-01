@@ -2,7 +2,7 @@ class RetirementScenariosController < ApplicationController
   before_action :set_scenario, only: [
     :show, :edit, :update, :destroy,
     :simulate, :explore, :apply_exploration,
-    :snapshots, :income_timeline, :portfolio
+    :snapshots, :income_timeline, :portfolio, :sweet_spot
   ]
 
   WIZARD_STEPS = %w[basics cashflow income portfolio].freeze
@@ -23,7 +23,7 @@ class RetirementScenariosController < ApplicationController
       portfolio_growth_std_dev: 15.0,
       inflation_rate: 3.0,
       simulation_count: 1000,
-      target_age: 90,
+      target_age: Setting.retirement_target_age,
       name: "My Retirement Plan",
       scenario_type: params[:scenario_type] || "household"
     )
@@ -78,9 +78,11 @@ class RetirementScenariosController < ApplicationController
     redirect_to retirement_scenarios_path, notice: t(".success")
   end
 
-  # Run Monte Carlo simulation + take snapshot
+  # Run Monte Carlo simulation + take snapshot (explicit user action — always enqueue)
   def simulate
-    @scenario.enqueue_monte_carlo!
+    @scenario.build_auto_milestones
+    @scenario.update_columns(monte_carlo_status: "pending")
+    RunMonteCarloJob.perform_later(@scenario.id)
     @scenario.create_snapshot_if_needed!(notes: "Manual simulation")
     redirect_to retirement_scenario_path(@scenario), notice: "Simulation started"
   end
@@ -111,12 +113,23 @@ class RetirementScenariosController < ApplicationController
 
   # Income timeline page
   def income_timeline
-    @chart_data = RetirementScenario::IncomeTimelineBuilder.new(@scenario).build_chart_data
+    if params[:run] == "true" || (@scenario.parsed_income_timeline_results.nil? && !@scenario.income_timeline_running?)
+      @scenario.enqueue_income_timeline!
+    end
+    @chart_data = @scenario.parsed_income_timeline_results
   end
 
   # Portfolio projection page
   def portfolio
     @chart_data = RetirementScenario::PortfolioProjectionBuilder.new(@scenario).build_chart_data
+  end
+
+  # Sweet spot analysis page
+  def sweet_spot
+    if params[:run] == "true" || (@scenario.parsed_sweet_spot_results.nil? && !@scenario.sweet_spot_running?)
+      @scenario.enqueue_sweet_spot!
+    end
+    @analysis = @scenario.parsed_sweet_spot_results
   end
 
   private

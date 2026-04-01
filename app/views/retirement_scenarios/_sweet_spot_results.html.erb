@@ -1,0 +1,301 @@
+<%# locals: (scenario:, analysis:) %>
+<div class="space-y-6">
+  <!-- Optimal Retirement Dates (one section per person) -->
+  <% retirement_results = analysis[:optimal_retirement] || [] %>
+  <% retirement_results = [retirement_results] if retirement_results.is_a?(Hash) %>
+
+  <% if retirement_results.any? %>
+    <% retirement_results.each do |retirement| %>
+      <% next unless retirement.is_a?(Hash) && retirement[:data_points]&.any? %>
+      <section class="bg-container shadow-border-xs rounded-xl p-4 space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-medium text-primary">Optimal Retirement Date</h3>
+          <span class="text-sm text-secondary"><%= retirement[:person_name] %></span>
+        </div>
+
+        <% if retirement[:sweet_spot] %>
+          <div class="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
+            <%= icon("check-circle", size: "sm", class: "text-green-600 mt-0.5") %>
+            <div>
+              <p class="text-sm font-medium text-green-800">
+                Earliest viable retirement: <strong><%= retirement[:sweet_spot][:label] %></strong>
+              </p>
+              <p class="text-sm text-green-700">
+                ~<%= retirement[:sweet_spot][:success_rate] %>% success probability,
+                <%= retirement[:sweet_spot][:years_from_now] %> years from now
+              </p>
+            </div>
+          </div>
+        <% else %>
+          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+            <%= icon("triangle-alert", size: "sm", class: "text-yellow-600 mt-0.5") %>
+            <div>
+              <p class="text-sm font-medium text-yellow-800">
+                No tested date achieves >= 80% success
+              </p>
+              <% if retirement[:best_result] %>
+                <p class="text-sm text-yellow-700">
+                  Best result: ~<%= retirement[:best_result][:success_rate] %>% at <%= retirement[:best_result][:label] %>
+                </p>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <p class="text-xs text-secondary">
+          Currently planned: <%= retirement[:current_date] %>
+        </p>
+
+        <!-- Retirement Date vs Probability Chart -->
+        <%
+          rates = retirement[:data_points].map { |dp| dp[:success_rate].to_f }
+          min_rate = rates.min
+          max_rate = rates.max
+          rate_range = max_rate - min_rate
+          bar_height_px = 180
+        %>
+        <div class="overflow-x-auto">
+          <div class="flex items-end gap-2 min-w-[600px]" style="height: <%= bar_height_px + 24 %>px">
+            <% retirement[:data_points].each do |dp| %>
+              <%
+                rate = dp[:success_rate].to_f
+                height_px = if rate_range > 0
+                  (24 + ((rate - min_rate) / rate_range) * (bar_height_px - 24)).round
+                else
+                  bar_height_px / 2
+                end
+                bar_color = if rate >= 80
+                  "bg-green-500"
+                elsif rate >= 50
+                  "bg-yellow-500"
+                else
+                  "bg-red-400"
+                end
+                is_sweet = retirement[:sweet_spot] && dp[:date] == retirement[:sweet_spot][:date]
+              %>
+              <div class="flex-1 min-w-[50px] flex flex-col items-center justify-end"
+                   style="height: 100%"
+                   title="<%= dp[:label] %>: ~<%= dp[:success_rate] %>%">
+                <span class="text-[10px] font-medium mb-1 <%= rate >= 80 ? 'text-green-600' : rate >= 50 ? 'text-yellow-600' : 'text-red-500' %>"><%= dp[:success_rate] %>%</span>
+                <div class="w-full rounded-t <%= bar_color %> <%= is_sweet ? 'ring-2 ring-blue-500 ring-offset-1' : '' %>"
+                     style="height: <%= height_px %>px">
+                </div>
+              </div>
+            <% end %>
+          </div>
+          <div class="flex gap-2 min-w-[600px] mt-2 border-t border-divider pt-2">
+            <% retirement[:data_points].each do |dp| %>
+              <div class="flex-1 min-w-[50px] text-center">
+                <span class="text-[10px] text-secondary"><%= dp[:label] %></span>
+              </div>
+            <% end %>
+          </div>
+        </div>
+        <div class="flex items-center gap-4 text-xs text-secondary mt-4">
+          <div class="flex items-center gap-1.5">
+            <div class="w-3 h-3 rounded bg-green-500"></div>
+            <span>>= 80% success</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <div class="w-3 h-3 rounded bg-yellow-500"></div>
+            <span>50-79%</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <div class="w-3 h-3 rounded bg-red-400"></div>
+            <span>< 50%</span>
+          </div>
+          <% if retirement[:sweet_spot] %>
+            <div class="flex items-center gap-1.5">
+              <div class="w-3 h-3 rounded ring-2 ring-blue-500 bg-white"></div>
+              <span>Sweet spot</span>
+            </div>
+          <% end %>
+        </div>
+      </section>
+    <% end %>
+  <% end %>
+
+  <!-- Cashout Product Analysis -->
+  <% cashout_products = analysis[:cashout_timing] || [] %>
+  <% if cashout_products.any? %>
+    <section class="space-y-4">
+      <h3 class="text-lg font-medium text-primary">Hold vs. Cash Out</h3>
+      <p class="text-sm text-secondary">
+        For each cashable pension product, compares taking a lump sum vs. holding for monthly pension payouts.
+      </p>
+
+      <% cashout_products.each do |product| %>
+        <div class="bg-container shadow-border-xs rounded-xl p-4 space-y-4">
+          <div class="flex items-center gap-2">
+            <%= icon("line-chart", class: "w-5 h-5 text-blue-600") %>
+            <div>
+              <p class="font-medium text-primary"><%= product[:account_name] %></p>
+              <p class="text-xs text-secondary"><%= product[:subtype]&.to_s&.humanize %></p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="bg-surface-inset rounded-lg p-3">
+              <p class="text-xs text-secondary">Current Value</p>
+              <p class="text-sm font-medium text-primary"><%= format_money Money.new(product[:current_value], scenario.family.currency) %></p>
+            </div>
+            <% if product[:monthly_contribution].to_f > 0 %>
+              <div class="bg-surface-inset rounded-lg p-3">
+                <p class="text-xs text-secondary">Monthly Contribution</p>
+                <p class="text-sm font-medium text-primary"><%= format_money Money.new(product[:monthly_contribution], scenario.family.currency) %>/mo</p>
+              </div>
+            <% end %>
+            <% if product[:surrender_value].to_f > 0 %>
+              <div class="bg-surface-inset rounded-lg p-3">
+                <p class="text-xs text-secondary">Surrender Value</p>
+                <p class="text-sm font-medium text-primary"><%= format_money Money.new(product[:surrender_value], scenario.family.currency) %></p>
+              </div>
+            <% end %>
+            <div class="bg-surface-inset rounded-lg p-3">
+              <p class="text-xs text-secondary">Value at Retirement</p>
+              <p class="text-sm font-medium text-primary"><%= format_money Money.new(product[:projected_at_retirement], scenario.family.currency) %></p>
+            </div>
+            <div class="bg-surface-inset rounded-lg p-3">
+              <p class="text-xs text-secondary">Monthly Payout</p>
+              <p class="text-sm font-medium text-primary">
+                <% if product[:monthly_payout].to_f > 0 %>
+                  <%= format_money Money.new(product[:monthly_payout], scenario.family.currency) %>/mo
+                <% else %>
+                  Not set
+                <% end %>
+              </p>
+            </div>
+          </div>
+
+          <% if product[:breakeven_years] %>
+            <div class="bg-surface-inset rounded-lg p-4">
+              <p class="text-sm text-secondary">
+                Breakeven: <strong><%= product[:breakeven_years] %> years</strong>
+                (<%= product[:breakeven_months] %> months) of pension payouts to equal the projected lump sum.
+              </p>
+            </div>
+          <% end %>
+
+          <% rec = product[:recommendation] %>
+          <%
+            rec_color = case rec[:action]&.to_sym
+              when :hold then "bg-green-50 border-green-200 text-green-800"
+              when :cash_out then "bg-blue-50 border-blue-200 text-blue-800"
+              else "bg-surface-inset border-secondary text-primary"
+            end
+            rec_icon = case rec[:action]&.to_sym
+              when :hold then "shield-check"
+              when :cash_out then "banknote"
+              else "scale"
+            end
+          %>
+          <div class="rounded-lg p-4 border flex items-start gap-3 <%= rec_color %>">
+            <%= icon(rec_icon, size: "sm", class: "mt-0.5") %>
+            <div>
+              <p class="text-sm font-medium">
+                <% case rec[:action]&.to_sym %>
+                <% when :hold %>
+                  Recommendation: Hold for monthly pension
+                <% when :cash_out %>
+                  Recommendation: Consider cashing out
+                <% else %>
+                  Depends on your situation
+                <% end %>
+              </p>
+              <p class="text-sm mt-1 opacity-80"><%= rec[:reason] %></p>
+            </div>
+          </div>
+
+          <% if product[:data_points]&.any? %>
+            <details class="group">
+              <summary class="cursor-pointer flex items-center gap-2 text-sm text-secondary hover:text-primary">
+                <%= icon("chevron-right", size: "sm", class: "group-open:rotate-90 transition-transform") %>
+                Projected value at different cashout dates
+              </summary>
+              <div class="mt-3 overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="text-xs text-secondary uppercase">
+                      <th class="text-left py-2">Date</th>
+                      <th class="text-left py-2">Years</th>
+                      <th class="text-right py-2">Projected Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% product[:data_points].each do |dp| %>
+                      <tr class="border-t border-divider">
+                        <td class="py-2 text-primary"><%= dp[:label] %></td>
+                        <td class="py-2 text-secondary"><%= dp[:years_from_now] %>y</td>
+                        <td class="py-2 text-right font-medium text-primary"><%= format_money Money.new(dp[:projected_value], scenario.family.currency) %></td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          <% end %>
+        </div>
+      <% end %>
+    </section>
+  <% else %>
+    <section class="bg-container shadow-border-xs rounded-xl p-4">
+      <div class="text-center py-6 space-y-2">
+        <p class="text-sm font-medium text-primary">No cashable pension products found</p>
+        <p class="text-xs text-secondary">
+          Add a Private Pension Insurance with early cashout enabled to see hold vs. cash out analysis.
+        </p>
+      </div>
+    </section>
+  <% end %>
+
+  <!-- Apply to Explorer (collects sweet spots from all persons + cashout dates) -->
+  <%
+    explorer_params = {}
+
+    # Person retirement dates
+    retirement_results.each do |ret|
+      next unless ret.is_a?(Hash) && ret[:sweet_spot] && ret[:person_id]
+      explorer_params["person_retirement_dates[#{ret[:person_id]}]"] = ret[:sweet_spot][:date]
+    end
+
+    # Pension cashout dates (for products recommended to cash out)
+    cashout_products.each do |product|
+      next unless product[:pension_source_id].present?
+      next unless product[:recommendation]&.dig(:action)&.to_sym == :cash_out
+      next unless product[:recommended_cashout_date].present?
+      explorer_params["pension_payout_dates[#{product[:pension_source_id]}]"] = product[:recommended_cashout_date]
+    end
+  %>
+  <% if explorer_params.any? %>
+    <section class="bg-blue-50 border border-blue-200 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <%= icon("arrow-right-circle", size: "sm", class: "text-blue-600 shrink-0") %>
+        <div>
+          <p class="text-sm font-medium text-blue-800">Try these recommendations in the Explorer</p>
+          <p class="text-xs text-blue-600">
+            Pre-fills the What-If Explorer with optimal dates
+            <%
+              items = []
+              retirement_results.select { |r| r.is_a?(Hash) && r[:sweet_spot] }.each { |r| items << r[:person_name] }
+              cashout_products.select { |p| p[:recommendation]&.dig(:action)&.to_sym == :cash_out }.each { |p| items << "#{p[:account_name]} cashout" }
+            %>
+            <% if items.any? %>
+              (<%= items.join(", ") %>)
+            <% end %>
+          </p>
+        </div>
+      </div>
+      <%= link_to retirement_scenario_path(scenario, explorer_params.merge(from_sweet_spot: true)),
+          class: "px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shrink-0" do %>
+        Try in Explorer
+      <% end %>
+    </section>
+  <% end %>
+
+  <!-- Timestamp -->
+  <% if scenario.sweet_spot_ran_at.present? %>
+    <p class="text-xs text-subdued text-center">
+      Analysis ran <%= time_ago_in_words(scenario.sweet_spot_ran_at) %> ago
+    </p>
+  <% end %>
+</div>

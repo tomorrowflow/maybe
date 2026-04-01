@@ -108,6 +108,67 @@ class RetirementScenario < ApplicationRecord
   end
 
   # ========================================
+  # Income Timeline
+  # ========================================
+
+  def enqueue_income_timeline!
+    return if income_timeline_status == "running"
+    update_columns(income_timeline_status: "pending")
+    BuildIncomeTimelineJob.perform_later(id)
+  end
+
+  def income_timeline_running?
+    income_timeline_status == "running"
+  end
+
+  def income_timeline_completed?
+    income_timeline_status == "completed"
+  end
+
+  def parsed_income_timeline_results
+    return nil unless income_timeline_results.present? && income_timeline_results != {}
+    data = income_timeline_results
+    data = JSON.parse(data) while data.is_a?(String)
+    return nil unless data.is_a?(Hash)
+    data.deep_symbolize_keys
+  rescue
+    nil
+  end
+
+  # ========================================
+  # Sweet Spot Analysis
+  # ========================================
+
+  def enqueue_sweet_spot!
+    return if sweet_spot_running?
+    update_columns(sweet_spot_status: "pending")
+    RunSweetSpotAnalysisJob.perform_later(id)
+  end
+
+  def sweet_spot_running?
+    sweet_spot_status == "running"
+  end
+
+  def sweet_spot_pending?
+    sweet_spot_status == "pending"
+  end
+
+  def sweet_spot_completed?
+    sweet_spot_status == "completed"
+  end
+
+  def parsed_sweet_spot_results
+    return nil unless sweet_spot_results.present? && sweet_spot_results != {}
+    data = sweet_spot_results
+    # Handle double-encoded JSON (string stored in JSONB)
+    data = JSON.parse(data) while data.is_a?(String)
+    return nil unless data.is_a?(Hash)
+    data.deep_symbolize_keys
+  rescue
+    nil
+  end
+
+  # ========================================
   # Pension Income
   # ========================================
 
@@ -199,14 +260,28 @@ class RetirementScenario < ApplicationRecord
   def fixed_obligations
     obligations = []
 
+    # Build a map of loan_id → bauspar_allocation_date for loans being replaced
+    bauspar_replacements = {}
+    family.accounts.active.where(accountable_type: "BausparContract").find_each do |account|
+      bauspar = account.accountable
+      if bauspar.respond_to?(:replaces_loan_account_id) && bauspar.replaces_loan_account_id.present?
+        bauspar_replacements[bauspar.replaces_loan_account_id] = bauspar.expected_allocation_date
+      end
+    end
+
     family.accounts.active.where(accountable_type: "Loan").find_each do |account|
       loan = account.accountable
       payment = numeric_value(loan.monthly_payment) if loan.respond_to?(:monthly_payment)
       next unless payment&.positive?
+
+      # If this loan is being replaced by a Bauspar, it ends at allocation date
+      end_date = loan.respond_to?(:maturity_date) ? loan.maturity_date : nil
+      end_date ||= bauspar_replacements[account.id]
+
       obligations << {
         name: account.name,
         monthly_amount: payment,
-        end_date: loan.respond_to?(:maturity_date) ? loan.maturity_date : nil,
+        end_date: end_date,
         account_id: account.id,
         type: :loan
       }
@@ -214,15 +289,34 @@ class RetirementScenario < ApplicationRecord
 
     family.accounts.active.where(accountable_type: "BausparContract").find_each do |account|
       bauspar = account.accountable
+
+      # Saving phase contribution
       contribution = numeric_value(bauspar.monthly_contribution)
-      next unless bauspar.phase == "saving" && contribution&.positive?
-      obligations << {
-        name: account.name,
-        monthly_amount: contribution,
-        end_date: bauspar.expected_allocation_date,
-        account_id: account.id,
-        type: :bauspar
-      }
+      if bauspar.phase == "saving" && contribution&.positive?
+        obligations << {
+          name: "#{account.name} (savings)",
+          monthly_amount: contribution,
+          end_date: bauspar.expected_allocation_date,
+          account_id: account.id,
+          type: :bauspar
+        }
+      end
+
+      # Future Bauspar loan phase (starts at allocation, term from fixed repayment)
+      if bauspar.phase == "saving" && bauspar.expected_allocation_date.present?
+        loan_payment = bauspar.bauspar_loan_monthly_payment
+        if loan_payment&.positive?
+          term_months = bauspar.bauspar_loan_term_months
+          obligations << {
+            name: "#{account.name} (loan)",
+            monthly_amount: loan_payment.round(2),
+            start_date: bauspar.expected_allocation_date,
+            end_date: bauspar.expected_allocation_date + term_months.months,
+            account_id: account.id,
+            type: :bauspar_loan
+          }
+        end
+      end
     end
 
     obligations
@@ -326,18 +420,29 @@ class RetirementScenario < ApplicationRecord
       allocation_date = bauspar.expected_allocation_date
 
       if bauspar.replaces_loan?
-        replaced_loan = bauspar.replaces_loan_account&.accountable
-        old_payment = numeric_value(replaced_loan&.monthly_payment) || 0
-        bauspar_contribution = numeric_value(bauspar.monthly_contribution) || 0
         new_payment = bauspar.bauspar_loan_monthly_payment || 0
 
-        freed = old_payment + bauspar_contribution - new_payment
-
+        # The milestone represents the NEW Bauspar loan payment that starts.
+        # The old loan payment and Bauspar contribution already drop off via
+        # fixed_obligations end_dates. We store the new payment as a NEGATIVE
+        # amount (increases expenses) so the timeline builder adds it correctly.
         milestones.create!(
           milestone_type: "bauspar_phase_change",
           date: allocation_date,
           label: "#{account.name} replaces #{bauspar.replaces_loan_account.name}",
-          amount: freed.round(2),
+          amount: -new_payment.round(2),
+          account: account,
+          auto_detected: true
+        )
+
+        # Bauspar loan payoff — term calculated from fixed repayment amount
+        term_months = bauspar.bauspar_loan_term_months
+        bauspar_loan_end = allocation_date + term_months.months
+        milestones.create!(
+          milestone_type: "debt_payoff",
+          date: bauspar_loan_end,
+          label: "#{account.name} loan paid off",
+          amount: new_payment.round(2),
           account: account,
           auto_detected: true
         )
@@ -475,7 +580,12 @@ class RetirementScenario < ApplicationRecord
       cashout_date = inv.effective_cashout_date
       next unless cashout_date.present? && cashout_date > Date.current
 
-      amount = inv.projected_cashout_amount(fallback_growth_rate: fallback_rate)
+      # Include monthly contributions into the projected value
+      monthly_contrib = find_linked_contribution_for(account)
+      amount = inv.projected_cashout_amount(
+        fallback_growth_rate: fallback_rate,
+        monthly_contribution: monthly_contrib
+      )
       next unless amount > 0
 
       events << {
@@ -487,6 +597,25 @@ class RetirementScenario < ApplicationRecord
     end
 
     events
+  end
+
+  # Find monthly contribution for an account.
+  # Priority: linked payment > fixed obligation > investment's own monthly_contribution field
+  def find_linked_contribution_for(account)
+    # From linked payments in wizard
+    linked = linked_payments.linked_to_account.find_by(account_id: account.id)
+    return linked.monthly_amount.to_f if linked&.monthly_amount.present?
+
+    # From detected fixed obligations (loans, Bauspar)
+    obligation = fixed_obligations.find { |o| o[:account_id] == account.id }
+    return obligation[:monthly_amount].to_f if obligation
+
+    # From the investment's own field (e.g., employer-paid contributions)
+    if account.accountable.respond_to?(:monthly_contribution) && account.accountable.monthly_contribution.present?
+      return account.accountable.monthly_contribution.to_f
+    end
+
+    0
   end
 
   private

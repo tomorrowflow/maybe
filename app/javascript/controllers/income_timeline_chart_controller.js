@@ -86,6 +86,7 @@ export default class extends Controller {
     this._drawAxes();
     this._drawLegend();
     this._drawTooltip();
+    // Tooltip tracking must be last so the overlay is on top of milestone hover areas
     this._trackMouseForShowingTooltip();
   }
 
@@ -124,13 +125,12 @@ export default class extends Controller {
 
   _drawStackedAreas() {
     const series = this.dataValue.series;
-    const keys = ["salary", "state_pension", "private_pensions", "other"];
+    const keys = ["salary", "private_pensions", "other"];
 
     // Transform data for stacking
     const stackData = series.salary.map((d, i) => ({
       date: parseLocalDate(d.date),
       salary: series.salary[i]?.value || 0,
-      state_pension: series.state_pension[i]?.value || 0,
       private_pensions: series.private_pensions[i]?.value || 0,
       other: series.other[i]?.value || 0,
     }));
@@ -204,20 +204,60 @@ export default class extends Controller {
       .attr("stroke", (d) => this._getMilestoneColor(d.type))
       .attr("stroke-width", 1.5)
       .attr("stroke-dasharray", "4,2")
-      .attr("opacity", 0.7);
+      .attr("opacity", 0.5);
 
-    // Draw milestone dots at top
+    // Draw milestone dots
     this._d3Group
       .selectAll(".milestone-dot")
       .data(visibleMilestones)
       .join("circle")
       .attr("class", "milestone-dot")
       .attr("cx", (d) => this._d3XScale(parseLocalDate(d.date)))
-      .attr("cy", 10)
-      .attr("r", 5)
+      .attr("cy", 8)
+      .attr("r", 4)
       .attr("fill", (d) => this._getMilestoneColor(d.type))
       .attr("stroke", "#fff")
       .attr("stroke-width", 1.5);
+
+    // Draw milestone labels with background
+    const labelGroups = this._d3Group
+      .selectAll(".milestone-label-group")
+      .data(visibleMilestones)
+      .join("g")
+      .attr("class", "milestone-label-group")
+      .attr("transform", (d, i) => {
+        const x = this._d3XScale(parseLocalDate(d.date));
+        const y = 20 + (i % 3) * 14; // Stagger labels to avoid overlap
+        return `translate(${x}, ${y})`;
+      });
+
+    // Label background
+    labelGroups.each(function(d) {
+      const label = d.label || "";
+      const textWidth = label.length * 5 + 12;
+      d3.select(this)
+        .append("rect")
+        .attr("x", 4)
+        .attr("y", -8)
+        .attr("width", textWidth)
+        .attr("height", 14)
+        .attr("rx", 3)
+        .attr("fill", "var(--color-container, #fff)")
+        .attr("stroke", "var(--color-alpha-black-100, #e5e5e5)")
+        .attr("stroke-width", 0.5)
+        .attr("opacity", 0.95);
+    });
+
+    // Label text
+    labelGroups
+      .append("text")
+      .attr("x", 8)
+      .attr("y", 3)
+      .attr("fill", (d) => this._getMilestoneColor(d.type))
+      .style("font-size", "9px")
+      .style("font-weight", "600")
+      .text((d) => d.label || "");
+
   }
 
   _getMilestoneColor(type) {
@@ -274,9 +314,8 @@ export default class extends Controller {
   _drawLegend() {
     const legendData = [
       { key: "salary", label: "Salary" },
-      { key: "state_pension", label: "State Pension" },
-      { key: "private_pensions", label: "Private Pensions" },
-      { key: "other", label: "Other" },
+      { key: "private_pensions", label: "Pensions" },
+      { key: "other", label: "Part-time Work" },
       { key: "expenses", label: "Expenses", isDashed: true },
     ];
 
@@ -339,14 +378,31 @@ export default class extends Controller {
         const d = {
           date: series.salary[idx].date,
           salary: series.salary[idx]?.value || 0,
-          state_pension: series.state_pension[idx]?.value || 0,
           private_pensions: series.private_pensions[idx]?.value || 0,
           other: series.other[idx]?.value || 0,
           expenses: this.dataValue.expenses_line[idx]?.value || 0,
         };
 
-        const totalIncome =
-          d.salary + d.state_pension + d.private_pensions + d.other;
+        const totalIncome = d.salary + d.private_pensions + d.other;
+        const surplus = totalIncome - d.expenses;
+
+        // Find milestones near this date (within 45 days)
+        const milestones = (this.dataValue.milestones || []).filter((m) => {
+          const mDate = parseLocalDate(m.date);
+          const diff = Math.abs(x0 - mDate);
+          return diff < 45 * 86400000; // 45 days in ms
+        });
+
+        // Highlight nearby milestone lines
+        this._d3Group.selectAll(".milestone-line")
+          .attr("stroke-width", 1.5)
+          .attr("opacity", 0.5);
+        milestones.forEach((m) => {
+          this._d3Group.selectAll(".milestone-line")
+            .filter(ml => ml.date === m.date && ml.type === m.type)
+            .attr("stroke-width", 3)
+            .attr("opacity", 1);
+        });
 
         // Update guideline
         this._d3Group.selectAll(".guideline").remove();
@@ -360,90 +416,86 @@ export default class extends Controller {
           .attr("stroke", "var(--color-gray-400)")
           .attr("stroke-dasharray", "4,4");
 
-        // Position tooltip
+        // Position tooltip relative to the chart container
+        const containerRect = this.element.getBoundingClientRect();
+        const relX = event.clientX - containerRect.left;
+        const relY = event.clientY - containerRect.top;
         const estimatedTooltipWidth = 220;
-        const pageWidth = document.body.clientWidth;
-        const tooltipX = event.pageX + 10;
-        const overflowX = tooltipX + estimatedTooltipWidth - pageWidth;
-        const adjustedX =
-          overflowX > 0 ? event.pageX - estimatedTooltipWidth - 10 : tooltipX;
+        const adjustedX = relX + estimatedTooltipWidth > containerRect.width
+          ? relX - estimatedTooltipWidth - 10
+          : relX + 12;
 
         this._d3Tooltip
-          .html(this._tooltipTemplate(d, totalIncome))
+          .html(this._tooltipTemplate(d, totalIncome, milestones))
           .style("opacity", 1)
           .style("left", `${adjustedX}px`)
-          .style("top", `${event.pageY - 10}px`);
+          .style("top", `${Math.max(relY - 10, 0)}px`);
       })
       .on("mouseout", () => {
         this._d3Group.selectAll(".guideline").remove();
         this._d3Tooltip.style("opacity", 0);
+        this._d3Group.selectAll(".milestone-line")
+          .attr("stroke-width", 1.5)
+          .attr("opacity", 0.5);
       });
   }
 
-  _tooltipTemplate(d, totalIncome) {
+  _tooltipTemplate(d, totalIncome, milestones = []) {
     const formatDate = d3.timeFormat("%B %Y");
     const date = parseLocalDate(d.date);
-    const symbol = this.dataValue.metadata?.currency_symbol || "$";
+    const symbol = this.dataValue.metadata?.currency_symbol || "€";
+    const surplus = totalIncome - d.expenses;
 
-    return `
-      <div style="margin-bottom: 8px; font-weight: 600; color: var(--color-gray-700);">
-        ${formatDate(date)}
-      </div>
-      <div style="display: grid; gap: 4px; font-size: 12px;">
-        ${
-          d.salary > 0
-            ? `<div style="display: flex; justify-content: space-between; gap: 16px;">
-                <span style="display: flex; align-items: center; gap: 6px;">
-                  <span style="width: 8px; height: 8px; background: ${this._colors.salary}; border-radius: 2px;"></span>
-                  Salary
-                </span>
-                <span style="font-weight: 500;">${symbol}${this._formatNumber(d.salary)}</span>
-              </div>`
-            : ""
-        }
-        ${
-          d.state_pension > 0
-            ? `<div style="display: flex; justify-content: space-between; gap: 16px;">
-                <span style="display: flex; align-items: center; gap: 6px;">
-                  <span style="width: 8px; height: 8px; background: ${this._colors.state_pension}; border-radius: 2px;"></span>
-                  State Pension
-                </span>
-                <span style="font-weight: 500;">${symbol}${this._formatNumber(d.state_pension)}</span>
-              </div>`
-            : ""
-        }
-        ${
-          d.private_pensions > 0
-            ? `<div style="display: flex; justify-content: space-between; gap: 16px;">
-                <span style="display: flex; align-items: center; gap: 6px;">
-                  <span style="width: 8px; height: 8px; background: ${this._colors.private_pensions}; border-radius: 2px;"></span>
-                  Private Pensions
-                </span>
-                <span style="font-weight: 500;">${symbol}${this._formatNumber(d.private_pensions)}</span>
-              </div>`
-            : ""
-        }
-        ${
-          d.other > 0
-            ? `<div style="display: flex; justify-content: space-between; gap: 16px;">
-                <span style="display: flex; align-items: center; gap: 6px;">
-                  <span style="width: 8px; height: 8px; background: ${this._colors.other}; border-radius: 2px;"></span>
-                  Other
-                </span>
-                <span style="font-weight: 500;">${symbol}${this._formatNumber(d.other)}</span>
-              </div>`
-            : ""
-        }
-        <div style="border-top: 1px solid var(--color-gray-200); margin-top: 4px; padding-top: 4px; display: flex; justify-content: space-between; gap: 16px;">
-          <span style="font-weight: 600;">Total Income</span>
-          <span style="font-weight: 600;">${symbol}${this._formatNumber(totalIncome)}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; gap: 16px; color: ${totalIncome >= d.expenses ? "var(--color-green-600)" : "var(--color-red-600)"};">
-          <span>vs Expenses</span>
-          <span style="font-weight: 500;">${symbol}${this._formatNumber(d.expenses)}</span>
-        </div>
-      </div>
-    `;
+    const row = (color, label, value) => `
+      <div style="display: flex; justify-content: space-between; gap: 20px;">
+        <span style="display: flex; align-items: center; gap: 6px;">
+          ${color ? `<span style="width: 8px; height: 8px; background: ${color}; border-radius: 2px;"></span>` : ""}
+          ${label}
+        </span>
+        <span style="font-weight: 500; white-space: nowrap;">${value}</span>
+      </div>`;
+
+    const separator = `<div style="border-top: 1px solid var(--color-gray-200); margin: 4px 0;"></div>`;
+
+    let html = `<div style="margin-bottom: 6px; font-weight: 600; color: var(--color-gray-700);">${formatDate(date)}</div>`;
+    html += `<div style="display: grid; gap: 3px; font-size: 12px;">`;
+
+    // Income section
+    if (d.salary > 0) html += row(this._colors.salary, "Salary", `${symbol}${this._formatNumber(d.salary)}`);
+    if (d.private_pensions > 0) html += row(this._colors.private_pensions, "Pensions", `${symbol}${this._formatNumber(d.private_pensions)}`);
+    if (d.other > 0) html += row(this._colors.other, "Part-time Work", `${symbol}${this._formatNumber(d.other)}`);
+
+    html += separator;
+    html += row(null, "<strong>Total Income</strong>", `<strong>${symbol}${this._formatNumber(totalIncome)}</strong>`);
+
+    // Expenses
+    html += separator;
+    html += row(null, `<span style="color: #EF4444;">Expenses</span>`, `<span style="color: #EF4444;">${symbol}${this._formatNumber(d.expenses)}</span>`);
+
+    // Surplus / Deficit
+    html += separator;
+    const surplusColor = surplus >= 0 ? "var(--color-green-600)" : "var(--color-red-600)";
+    const surplusSign = surplus >= 0 ? "+" : "";
+    html += row(null,
+      `<strong style="color: ${surplusColor};">${surplus >= 0 ? "Surplus" : "Deficit"}</strong>`,
+      `<strong style="color: ${surplusColor};">${surplusSign}${symbol}${this._formatNumber(surplus)}</strong>`
+    );
+
+    // Milestones near this date
+    if (milestones.length > 0) {
+      html += separator;
+      milestones.forEach((m) => {
+        const color = this._getMilestoneColor(m.type);
+        const amountStr = m.amount ? `${symbol}${this._formatNumber(Math.abs(m.amount))}/mo` : "";
+        html += `<div style="display: flex; align-items: start; gap: 6px;">
+          <span style="width: 8px; height: 8px; background: ${color}; border-radius: 50%; margin-top: 4px; flex-shrink: 0;"></span>
+          <span style="color: ${color}; font-weight: 500;">${m.label}${amountStr ? ` (${amountStr})` : ""}</span>
+        </div>`;
+      });
+    }
+
+    html += `</div>`;
+    return html;
   }
 
   _formatCurrency(value) {
@@ -532,7 +584,6 @@ export default class extends Controller {
     for (let i = 0; i < series.salary.length; i++) {
       const total =
         (series.salary[i]?.value || 0) +
-        (series.state_pension[i]?.value || 0) +
         (series.private_pensions[i]?.value || 0) +
         (series.other[i]?.value || 0);
       maxStacked = Math.max(maxStacked, total);

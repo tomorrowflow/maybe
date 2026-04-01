@@ -1,0 +1,26 @@
+<div class="space-y-4">
+  <div>
+    <h2 class="font-medium mb-1">Retirement Planning Defaults</h2>
+    <p class="text-secondary text-sm mb-4">
+      Set the default target age for retirement planning. This is the age through which income and expenses are projected.
+      Individual retirement plans can override this value.
+    </p>
+  </div>
+
+  <%= styled_form_with model: Setting.new,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       data: {
+                         controller: "auto-submit-form",
+                       } do |form| %>
+    <%= form.number_field :retirement_target_age,
+                          label: "Target Age (Plan Through)",
+                          value: Setting.retirement_target_age,
+                          placeholder: "90",
+                          min: 60,
+                          max: 120,
+                          step: 1,
+                          data: { auto_submit_form_target: "auto" },
+                          helper_text: "The age until which retirement simulations project income and expenses (default: 90)" %>
+  <% end %>
+</div>

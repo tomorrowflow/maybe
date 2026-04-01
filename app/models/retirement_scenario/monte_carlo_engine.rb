@@ -45,7 +45,7 @@ class RetirementScenario
           # Inflation-adjusted expenses
           expenses = annual_expenses * ((1 + inflation_rate) ** year)
 
-          # Fixed obligations (loans, Bauspar) — adjusted by milestones
+          # Fixed obligations (loans, Bauspar contributions, Bauspar loans)
           obligations = annual_obligations_at(current_date)
 
           # Net withdrawal from portfolio
@@ -135,19 +135,9 @@ class RetirementScenario
         total = 0.0
 
         obligations_data.each do |o|
-          if o[:end_date].nil? || date < o[:end_date]
-            total += o[:monthly_amount].to_f * 12
-          end
-        end
-
-        # Apply milestone adjustments
-        sorted_milestones.each do |m|
-          next unless m.date <= date
-
-          case m.milestone_type
-          when "debt_payoff", "bauspar_phase_change"
-            total -= (m.amount || 0).to_f * 12
-          end
+          started = o[:start_date].nil? || date >= o[:start_date]
+          ended = o[:end_date].present? && date >= o[:end_date]
+          total += o[:monthly_amount].to_f * 12 if started && !ended
         end
 
         [ total, 0 ].max
@@ -286,13 +276,30 @@ class RetirementScenario
       # ========================================
 
       def scenario_persons
-        @scenario_persons ||= scenario.retirement_scenario_persons.includes(:person).to_a
+        @scenario_persons ||= begin
+          persons = scenario.retirement_scenario_persons.includes(:person).to_a
+          date_overrides = overrides[:person_retirement_dates] || {}
+
+          persons.map do |rsp|
+            if date_overrides[rsp.id.to_s].present?
+              # Create a proxy that overrides the retirement date
+              PersonProxy.new(rsp, date_overrides[rsp.id.to_s])
+            else
+              rsp
+            end
+          end
+        end
       end
 
       def pension_sources_data
-        @pension_sources_data ||= scenario.pension_sources.with_payout.map { |ps|
-          { expected_monthly_payout: ps.expected_monthly_payout, payout_start_date: ps.payout_start_date }
-        }
+        @pension_sources_data ||= begin
+          date_overrides = overrides[:pension_payout_dates] || {}
+
+          scenario.pension_sources.with_payout.map { |ps|
+            payout_date = date_overrides[ps.id.to_s] || ps.payout_start_date
+            { expected_monthly_payout: ps.expected_monthly_payout, payout_start_date: payout_date }
+          }
+        end
       end
 
       def obligations_data
@@ -309,6 +316,30 @@ class RetirementScenario
 
       def cashout_events
         @cashout_events ||= scenario.build_cashout_events(scenario.portfolio_growth_rate || 7.0)
+      end
+
+      # Lightweight proxy to override salary_end_date on a RetirementScenarioPerson
+      # without persisting the change. Delegates everything else to the original.
+      class PersonProxy
+        attr_reader :original, :overridden_date
+
+        delegate :person, :current_annual_salary, :state_pension_monthly,
+                 :state_pension_start_date, :post_retirement_income_monthly,
+                 :post_retirement_income_start_date, :post_retirement_income_end_date,
+                 :id, to: :original
+
+        def initialize(original, overridden_date)
+          @original = original
+          @overridden_date = overridden_date
+        end
+
+        def salary_end_date
+          overridden_date
+        end
+
+        def target_retirement_date
+          overridden_date
+        end
       end
   end
 end

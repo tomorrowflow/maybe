@@ -107,6 +107,15 @@
                                      step: 0.001 %>
       </div>
 
+      <div class="flex items-center gap-2">
+        <%= bauspar_form.number_field :loan_monthly_repayment,
+                                     label: "Monthly Repayment (Tilgungsbeitrag)",
+                                     placeholder: "500",
+                                     helper_text: "Fixed monthly repayment during the loan phase. Defines the loan duration.",
+                                     min: 0,
+                                     step: 1 %>
+      </div>
+
       <%= render "shared/ruler", classes: "my-4" %>
       <h3 class="text-sm font-medium text-secondary mb-2">Allocation Requirements</h3>
 

@@ -1,0 +1,34 @@
+<%# locals: (scenario:, chart_data:) %>
+<div class="space-y-6">
+  <% gap = chart_data[:gap_period] %>
+  <% if gap %>
+    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-start gap-3">
+      <%= icon("triangle-alert", size: "sm", class: "text-yellow-600 mt-0.5") %>
+      <div>
+        <p class="text-sm font-medium text-yellow-800">Income Gap Detected</p>
+        <p class="text-sm text-yellow-700">
+          You have a <%= gap[:months] %>-month gap between your salary ending and your first pension starting
+          (<%= gap[:start_date] %> to <%= gap[:end_date] %>).
+          Monthly shortfall: <%= format_money Money.new(gap[:monthly_shortfall], scenario.family.currency) %>
+        </p>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Chart with integrated milestones -->
+  <section class="bg-container shadow-border-xs rounded-xl p-4 space-y-3">
+    <h2 class="text-lg font-medium text-primary">Income Over Time</h2>
+    <div id="income-timeline-chart"
+         class="relative"
+         style="height: 420px"
+         data-controller="income-timeline-chart"
+         data-income-timeline-chart-data-value="<%= chart_data.to_json %>">
+    </div>
+  </section>
+
+  <% if scenario.income_timeline_ran_at.present? %>
+    <p class="text-xs text-subdued text-center">
+      Built <%= time_ago_in_words(scenario.income_timeline_ran_at) %> ago
+    </p>
+  <% end %>
+</div>

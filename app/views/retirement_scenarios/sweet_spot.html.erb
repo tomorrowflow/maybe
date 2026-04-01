@@ -1,0 +1,60 @@
+<div class="space-y-6 max-w-5xl mx-auto">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-medium text-primary"><%= @scenario.name %></h1>
+    <div class="flex items-center gap-2">
+      <%= render DS::Button.new(
+        text: "Re-analyze",
+        icon: "refresh-cw",
+        variant: :outline,
+        href: sweet_spot_retirement_scenario_path(@scenario, run: true)
+      ) %>
+      <%= render DS::Link.new(text: "Edit", icon: "pencil", variant: :outline, href: edit_retirement_scenario_path(@scenario)) %>
+    </div>
+  </div>
+
+  <!-- Page Navigation -->
+  <%= render "retirement_scenarios/page_nav", scenario: @scenario, active: :sweet_spot %>
+
+  <div class="space-y-2">
+    <h2 class="text-lg font-medium text-primary">Sweet Spot Analysis</h2>
+    <p class="text-sm text-secondary">
+      Finds the optimal timing for retirement and pension cashouts by simulating different dates.
+    </p>
+  </div>
+
+  <!-- Subscribe to family broadcasts for live updates -->
+  <%= turbo_stream_from @scenario.family %>
+
+  <!-- Results (replaced via Turbo Stream when job completes) -->
+  <div id="sweet-spot-results-<%= @scenario.id %>">
+
+    <% if @scenario.sweet_spot_running? || @scenario.sweet_spot_pending? %>
+      <!-- Running state -->
+      <section class="bg-container shadow-border-xs rounded-xl p-6">
+        <div class="flex flex-col items-center justify-center py-8 space-y-3">
+          <div class="animate-spin text-secondary">
+            <%= icon("loader-2", size: "md") %>
+          </div>
+          <p class="text-sm font-medium text-primary">Running sweet spot analysis...</p>
+          <p class="text-xs text-secondary">Testing multiple retirement dates and cashout scenarios. This may take a moment.</p>
+        </div>
+      </section>
+
+    <% elsif @analysis.present? %>
+      <%= render "retirement_scenarios/sweet_spot_results", scenario: @scenario, analysis: @analysis %>
+
+    <% else %>
+      <!-- No results yet -->
+      <section class="bg-container shadow-border-xs rounded-xl p-6">
+        <div class="flex flex-col items-center justify-center py-8 space-y-3">
+          <div class="text-secondary">
+            <%= icon("target", size: "md") %>
+          </div>
+          <p class="text-sm font-medium text-primary">No analysis results yet</p>
+          <p class="text-xs text-secondary">Click "Re-analyze" to run the sweet spot analysis.</p>
+        </div>
+      </section>
+    <% end %>
+  </div>
+</div>
